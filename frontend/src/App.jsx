@@ -19,6 +19,7 @@ import TermsPage from "./pages/TermsPage";
 import HistoryPage from "./pages/HistoryPage";
 import NotFoundPage from "./pages/NotFoundPage";
 import SpeechTranslatorPage from "./pages/SpeechTranslatorPage";
+import ChatbotPage from "./pages/ChatbotPage";
 
 // Components
 import Navbar from "./components/Navbar";
@@ -93,6 +94,14 @@ const AppRoutes = () => {
           element={
             <ProtectedRoute>
               <SpeechTranslatorPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/chatbot"
+          element={
+            <ProtectedRoute>
+              <ChatbotPage />
             </ProtectedRoute>
           }
         />

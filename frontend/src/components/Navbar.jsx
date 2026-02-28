@@ -120,6 +120,21 @@ const Navbar = () => {
                 </li>
                 <li className="nav-item">
                   <Link
+                    to="/chatbot"
+                    className="nav-link px-3"
+                    style={{
+                      color: isActive("/chatbot")
+                        ? "var(--orange-primary)"
+                        : "var(--dark-muted)",
+                      fontWeight: isActive("/chatbot") ? 600 : 400,
+                    }}
+                  >
+                    <i className="bi bi-chat-dots me-1" />
+                    Chat
+                  </Link>
+                </li>
+                <li className="nav-item">
+                  <Link
                     to="/history"
                     className="nav-link px-3"
                     style={{
