@@ -1,6 +1,11 @@
 import React, { useState } from "react";
 
-const ChatInput = ({ onSendText, onStartRecording, onStopRecording, isRecording }) => {
+const ChatInput = ({
+  onSendText,
+  onStartRecording,
+  onStopRecording,
+  isRecording,
+}) => {
   const [text, setText] = useState("");
 
   const handleSend = () => {

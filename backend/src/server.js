@@ -1,5 +1,5 @@
 const dotenv = require('dotenv');
-dotenv.config({ path: ".env.dev", quiet: false })
+dotenv.config({ path: ".env.local", quiet: false })
 const http = require("http")
 const app = require("./app")
 const { connectDB } = require('./config/database');

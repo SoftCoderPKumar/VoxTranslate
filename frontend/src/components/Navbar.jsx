@@ -130,7 +130,7 @@ const Navbar = () => {
                     }}
                   >
                     <i className="bi bi-chat-dots me-1" />
-                    Chat
+                    Medi-assistant
                   </Link>
                 </li>
                 <li className="nav-item">

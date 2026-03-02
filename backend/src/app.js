@@ -8,7 +8,8 @@ const path = require('path');
 
 const authRoutes = require('./routes/authRoutes');
 const translationRoutes = require('./routes/translationRoutes');
-const userRoutes = require('./routes/userRoutes')
+const userRoutes = require('./routes/userRoutes');
+const genAIRouter = require('./routes/genAIRoutes');
 const { errorHandler } = require('./middleware/errorHandler')
 const logger = require('./utils/logger');
 
@@ -91,6 +92,7 @@ app.get('/health', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/translate', translationRoutes);
 app.use('/api/user', userRoutes);
+app.use('/api/genai', genAIRouter);
 
 
 
