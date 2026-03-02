@@ -20,6 +20,7 @@ import HistoryPage from "./pages/HistoryPage";
 import NotFoundPage from "./pages/NotFoundPage";
 import SpeechTranslatorPage from "./pages/SpeechTranslatorPage";
 import ChatbotPage from "./pages/ChatbotPage";
+import UserListPage from "./pages/UserListPage";
 
 // Components
 import Navbar from "./components/Navbar";
@@ -102,6 +103,14 @@ const AppRoutes = () => {
           element={
             <ProtectedRoute>
               <ChatbotPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/users"
+          element={
+            <ProtectedRoute>
+              <UserListPage />
             </ProtectedRoute>
           }
         />

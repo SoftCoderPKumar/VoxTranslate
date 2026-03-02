@@ -1,0 +1,27 @@
+.user-list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.user-list-actions {
+  display: flex;
+  gap: 8px;
+}
+.user-form-wrapper {
+  max-width: 720px;
+  margin-top: 16px;
+}
+
+.table thead th {
+  color: var(--dark-muted);
+}
+.table tbody td {
+  vertical-align: middle;
+}
+
+@media (max-width: 768px) {
+  .user-list-header {
+    flex-direction: column;
+    gap: 8px;
+  }
+}

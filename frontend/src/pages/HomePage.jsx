@@ -488,7 +488,19 @@ const HomePage = () => {
                       ["/translate", "Translator"],
                       ["/history", "History"],
                       ["/settings", "Settings"],
-                    ]
+                    ].map(([to, label]) => (
+                      <Link
+                        key={to}
+                        to={to}
+                        style={{
+                          color: "var(--dark-muted)",
+                          textDecoration: "none",
+                          fontSize: "0.9rem",
+                        }}
+                      >
+                        {label}
+                      </Link>
+                    ))
                   : [
                       ["/login", "Login"],
                       ["/signup", "Sign Up"],

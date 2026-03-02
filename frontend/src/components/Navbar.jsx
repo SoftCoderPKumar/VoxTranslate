@@ -8,6 +8,7 @@ const Navbar = () => {
   const navigate = useNavigate();
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [adminOpen, setAdminOpen] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
@@ -17,6 +18,7 @@ const Navbar = () => {
 
   useEffect(() => {
     setMenuOpen(false);
+    setAdminOpen(false);
   }, [location]);
 
   const isActive = (path) => location.pathname === path;
@@ -72,20 +74,24 @@ const Navbar = () => {
         {/* Nav Links */}
         <div className={`collapse navbar-collapse ${menuOpen ? "show" : ""}`}>
           <ul className="navbar-nav me-auto gap-1">
-            <li className="nav-item">
-              <Link
-                to="/"
-                className="nav-link px-3"
-                style={{
-                  color: isActive("/")
-                    ? "var(--orange-primary)"
-                    : "var(--dark-muted)",
-                  fontWeight: isActive("/") ? 600 : 400,
-                }}
-              >
-                Home
-              </Link>
-            </li>
+            {!user && (
+              <>
+                <li className="nav-item">
+                  <Link
+                    to="/"
+                    className="nav-link px-3"
+                    style={{
+                      color: isActive("/")
+                        ? "var(--orange-primary)"
+                        : "var(--dark-muted)",
+                      fontWeight: isActive("/") ? 600 : 400,
+                    }}
+                  >
+                    Home
+                  </Link>
+                </li>
+              </>
+            )}
             {user && (
               <>
                 <li className="nav-item">
@@ -133,6 +139,61 @@ const Navbar = () => {
                     Medi-assistant
                   </Link>
                 </li>
+                <li
+                  className="nav-item dropdown"
+                  style={{ position: "relative" }}
+                >
+                  <button
+                    className="nav-link px-3"
+                    onClick={() => setAdminOpen((v) => !v)}
+                    style={{
+                      background: "transparent",
+                      border: "none",
+                      color: isActive("/users")
+                        ? "var(--orange-primary)"
+                        : "var(--dark-muted)",
+                      fontWeight: isActive("/users") ? 600 : 400,
+                      cursor: "pointer",
+                    }}
+                    aria-expanded={adminOpen}
+                  >
+                    <i className="bi bi-grid-3x3-gap me-1" />
+                    Admin
+                    <i
+                      className={`bi bi-caret-${adminOpen ? "up" : "down"}-fill ms-2`}
+                    />
+                  </button>
+                  {adminOpen && (
+                    <ul
+                      className="card-dark"
+                      style={{
+                        position: "absolute",
+                        top: "48px",
+                        left: 0,
+                        minWidth: 180,
+                        borderRadius: 8,
+                        padding: 8,
+                        listStyle: "none",
+                      }}
+                    >
+                      <li style={{ padding: 6 }}>
+                        <Link className="text-decoration-none" to="/users">
+                          User List
+                        </Link>
+                      </li>
+                      <li style={{ padding: 6 }}>
+                        <Link className="text-decoration-none" to="#">
+                          Reports
+                        </Link>
+                      </li>
+                      <li style={{ padding: 6 }}>
+                        <Link className="text-decoration-none" to="#">
+                          Integrations
+                        </Link>
+                      </li>
+                    </ul>
+                  )}
+                </li>
                 <li className="nav-item">
                   <Link
                     to="/history"
@@ -150,34 +211,38 @@ const Navbar = () => {
                 </li>
               </>
             )}
-            <li className="nav-item">
-              <Link
-                to="/about"
-                className="nav-link px-3"
-                style={{
-                  color: isActive("/about")
-                    ? "var(--orange-primary)"
-                    : "var(--dark-muted)",
-                  fontWeight: isActive("/about") ? 600 : 400,
-                }}
-              >
-                About
-              </Link>
-            </li>
-            <li className="nav-item">
-              <Link
-                to="/terms"
-                className="nav-link px-3"
-                style={{
-                  color: isActive("/terms")
-                    ? "var(--orange-primary)"
-                    : "var(--dark-muted)",
-                  fontWeight: isActive("/terms") ? 600 : 400,
-                }}
-              >
-                Terms
-              </Link>
-            </li>
+            {!user && (
+              <>
+                <li className="nav-item">
+                  <Link
+                    to="/about"
+                    className="nav-link px-3"
+                    style={{
+                      color: isActive("/about")
+                        ? "var(--orange-primary)"
+                        : "var(--dark-muted)",
+                      fontWeight: isActive("/about") ? 600 : 400,
+                    }}
+                  >
+                    About
+                  </Link>
+                </li>
+                <li className="nav-item">
+                  <Link
+                    to="/terms"
+                    className="nav-link px-3"
+                    style={{
+                      color: isActive("/terms")
+                        ? "var(--orange-primary)"
+                        : "var(--dark-muted)",
+                      fontWeight: isActive("/terms") ? 600 : 400,
+                    }}
+                  >
+                    Terms
+                  </Link>
+                </li>
+              </>
+            )}
           </ul>
 
           {/* Right Side */}

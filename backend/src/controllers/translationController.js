@@ -1,40 +1,12 @@
 const { validationResult } = require('express-validator');
-const OpenAI = require('openai');
 const Groq = require('groq-sdk');
-const Translation = require('../models/Translation')
+const Translation = require('../models/Translation');
 const User = require('../models/User');
-const logger = require('../utils/logger')
-const { SUPPORTED_LANGUAGES } = require('../utils/content')
+const logger = require('../utils/logger');
+const { SUPPORTED_LANGUAGES } = require('../utils/content');
+const { getGroqAIClient } = require('../utils/groqaiApi');
+const { getOpenAIClient } = require('../utils/openaiApi');
 
-/**
- * Get an OpenAI client - uses user's key if available, falls back to system key
- */
-const getOpenAIClient = async (userId) => {
-    const user = await User.findById(userId);
-    const userKey = user?.getApiKey('openai');
-    const apiKey = userKey || process.env.OPENAI_API_KEY;
-
-    if (!apiKey) {
-        throw new Error('No OpenAI API key configured. Please add your API key in settings.');
-    }
-
-    return new OpenAI({ apiKey });
-};
-
-/**
- * Get an GroqAI client - uses user's key if available, falls back to system key
- */
-const getGroqAIClient = async (userId) => {
-    const user = await User.findById(userId);
-    const userKey = user?.getApiKey('groq');
-    const apiKey = userKey || process.env.GROQ_API_KEY;
-
-    if (!apiKey) {
-        throw new Error('No Groq API key configured. Please add your API key in settings.');
-    }
-
-    return new Groq({ apiKey });
-};
 
 /**
  * POST /api/translate/text
