@@ -139,61 +139,74 @@ const Navbar = () => {
                     Medi-assistant
                   </Link>
                 </li>
-                <li
-                  className="nav-item dropdown"
-                  style={{ position: "relative" }}
-                >
-                  <button
-                    className="nav-link px-3"
-                    onClick={() => setAdminOpen((v) => !v)}
-                    style={{
-                      background: "transparent",
-                      border: "none",
-                      color: isActive("/users")
-                        ? "var(--orange-primary)"
-                        : "var(--dark-muted)",
-                      fontWeight: isActive("/users") ? 600 : 400,
-                      cursor: "pointer",
-                    }}
-                    aria-expanded={adminOpen}
-                  >
-                    <i className="bi bi-grid-3x3-gap me-1" />
-                    Admin
-                    <i
-                      className={`bi bi-caret-${adminOpen ? "up" : "down"}-fill ms-2`}
-                    />
-                  </button>
-                  {adminOpen && (
-                    <ul
-                      className="card-dark"
-                      style={{
-                        position: "absolute",
-                        top: "48px",
-                        left: 0,
-                        minWidth: 180,
-                        borderRadius: 8,
-                        padding: 8,
-                        listStyle: "none",
-                      }}
+                {user.role === "admin" && (
+                  <>
+                    <li
+                      className="nav-item dropdown"
+                      style={{ position: "relative" }}
                     >
-                      <li style={{ padding: 6 }}>
-                        <Link className="text-decoration-none" to="/users">
-                          User List
-                        </Link>
-                      </li>
-                      <li style={{ padding: 6 }}>
-                        <Link className="text-decoration-none" to="#">
-                          Reports
-                        </Link>
-                      </li>
-                      <li style={{ padding: 6 }}>
-                        <Link className="text-decoration-none" to="#">
-                          Integrations
-                        </Link>
-                      </li>
-                    </ul>
-                  )}
-                </li>
+                      <button
+                        className="nav-link px-3"
+                        onClick={() => setAdminOpen((v) => !v)}
+                        style={{
+                          background: "transparent",
+                          border: "none",
+                          color: isActive("/users")
+                            ? "var(--orange-primary)"
+                            : "var(--dark-muted)",
+                          fontWeight: isActive("/users") ? 600 : 400,
+                          cursor: "pointer",
+                        }}
+                        aria-expanded={adminOpen}
+                      >
+                        <i className="bi bi-grid-3x3-gap me-1" />
+                        Admin
+                        <i
+                          className={`bi bi-caret-${adminOpen ? "up" : "down"}-fill ms-2`}
+                        />
+                      </button>
+                      {adminOpen && (
+                        <ul
+                          className="card-dark"
+                          style={{
+                            position: "absolute",
+                            top: "48px",
+                            left: 0,
+                            minWidth: 180,
+                            borderRadius: 8,
+                            padding: 8,
+                            listStyle: "none",
+                          }}
+                        >
+                          <li style={{ padding: 6 }}>
+                            <Link
+                              className="text-decoration-none"
+                              to="/users"
+                              style={{
+                                color: isActive("/users")
+                                  ? "var(--orange-primary)"
+                                  : "var(--dark-muted)",
+                                fontWeight: isActive("/users") ? 600 : 400,
+                              }}
+                            >
+                              User List
+                            </Link>
+                          </li>
+                          {/* <li style={{ padding: 6 }}>
+                            <Link className="text-decoration-none" to="#">
+                              Reports
+                            </Link>
+                          </li>
+                          <li style={{ padding: 6 }}>
+                            <Link className="text-decoration-none" to="#">
+                              Integrations
+                            </Link>
+                          </li> */}
+                        </ul>
+                      )}
+                    </li>
+                  </>
+                )}
                 <li className="nav-item">
                   <Link
                     to="/history"

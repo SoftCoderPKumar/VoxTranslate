@@ -44,6 +44,25 @@ const ProtectedRoute = ({ children }) => {
   return user ? children : <Navigate to="/" replace />;
 };
 
+// Protected route wrapper
+const AdminProtectedRoute = ({ children }) => {
+  const { user, loading } = useAuth();
+  if (loading) {
+    return (
+      <div
+        className="d-flex justify-content-center align-items-center"
+        style={{ minHeight: "100vh" }}
+      >
+        <div className="text-center">
+          <div className="spinner-orange mx-auto mb-3" />
+          <p className="text-muted-dark">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+  return user && user.role === "admin" ? children : <Navigate to="/" replace />;
+};
+
 // Public route (redirect to translator if logged in)
 const PublicRoute = ({ children }) => {
   const { user, loading } = useAuth();
@@ -109,9 +128,9 @@ const AppRoutes = () => {
         <Route
           path="/users"
           element={
-            <ProtectedRoute>
+            <AdminProtectedRoute>
               <UserListPage />
-            </ProtectedRoute>
+            </AdminProtectedRoute>
           }
         />
         <Route
