@@ -44,7 +44,7 @@ const ProtectedRoute = ({ children }) => {
   return user ? children : <Navigate to="/" replace />;
 };
 
-// Protected route wrapper
+// Admin Protected route wrapper
 const AdminProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
   if (loading) {

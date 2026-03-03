@@ -89,6 +89,10 @@ const userSchema = new mongoose.Schema({
         type: Boolean,
         default: true,
     },
+    isDeleted: {
+        type: Boolean,
+        default: false,
+    },
     lastLogin: {
         type: Date,
         default: null,
@@ -106,7 +110,7 @@ const userSchema = new mongoose.Schema({
 })
 
 // Index for performance
-userSchema.index({ email: 1, isActive: 1, createdAt: -1 });
+userSchema.index({ email: 1, isActive: 1, isDeleted: 1, createdAt: -1 });
 
 
 

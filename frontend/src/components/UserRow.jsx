@@ -1,29 +1,45 @@
 import React from "react";
+import { useAuth } from "../context/AuthContext";
 
-const UserRow = ({ user, onEdit, onDelete, onToggle }) => {
+const UserRow = ({ userData, id, onEdit, onDelete, onToggle }) => {
+  const { user } = useAuth();
   return (
     <tr>
-      <td>{user._id || user.id || "-"}</td>
-      <td>{user.name}</td>
-      <td>{user.email}</td>
-      <td>{user.active ? "Enabled" : "Disabled"}</td>
+      <td>{id || "-"}</td>
+      <td>{userData.name}</td>
+      <td>{userData.email}</td>
+      <td>{userData.translationCount}</td>
+      <td>
+        <span
+          className={`badge ${userData.isActive ? "badge-green" : "badge-orange"}`}
+        >
+          {userData.isActive ? "active" : "inactive"}
+        </span>
+      </td>
       <td>
         <div style={{ display: "flex", gap: 8 }}>
           <button
             className="btn btn-outline-green btn-sm"
-            onClick={() => onEdit(user)}
+            onClick={() => onEdit(userData)}
           >
             Edit
           </button>
-          <button
-            className="btn btn-outline-orange btn-sm"
-            onClick={() => onDelete(user)}
-          >
-            Delete
-          </button>
-          <button className="btn btn-sm" onClick={() => onToggle(user)}>
-            {user.active ? "Disable" : "Enable"}
-          </button>
+          {user.id !== userData._id && (
+            <>
+              <button
+                className="btn btn-outline-orange btn-sm"
+                onClick={() => onDelete(userData)}
+              >
+                Delete
+              </button>
+              <button
+                className={`btn ${userData.isActive ? "btn-outline-green" : "btn-outline-orange"}  btn-sm`}
+                onClick={() => onToggle(userData)}
+              >
+                {userData.isActive ? "Disable" : "Enable"}
+              </button>
+            </>
+          )}
         </div>
       </td>
     </tr>

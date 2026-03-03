@@ -70,7 +70,7 @@ const login = async (req, res, next) => {
 
         //Find user with password
         const user = await User.findOne({ email: email.toLowerCase() }).select('+password');
-        if (!user || !user.isActive) {
+        if (!user || !user.isActive || user.isDeleted) {
             return res.status(401).json({ error: 'Invalid email or password' });
         }
 
@@ -122,7 +122,7 @@ const refresh = async (req, res, next) => {
 
         // Find user
         const user = await User.findById(userId);
-        if (!user || !user.isActive) {
+        if (!user || !user.isActive || user.isDeleted) {
             await revokeRefreshToken(tokenId);
             clearTokenCookies(res);
             return res.status(401).json({ error: 'User not found', code: 'USER_NOT_FOUND' });

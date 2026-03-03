@@ -22,23 +22,15 @@ const UserListPage = () => {
     setLoading(true);
     try {
       const res = await api.get(
-        `/api/user?page=${page}&limit=${PER_PAGE}&q=${encodeURIComponent(query)}`,
+        `/api/user/list?page=${page}&limit=${PER_PAGE}&q=${encodeURIComponent(query)}`,
       );
       setUsers(res.data.users || []);
-      setTotal(res.data.total || 0);
-    } catch (err) {
-      // If backend endpoint doesn't exist or unauthorized, fallback to dummy users so UI remains usable
-      console.warn("User API fetch failed, falling back to dummy data", err);
-      const dummy = Array.from({ length: 14 }).map((_, i) => ({
-        _id: `local-${i + 1}`,
-        name: `User ${i + 1}`,
-        email: `user${i + 1}@example.com`,
-        active: i % 3 !== 0,
-      }));
-      setUsers(dummy.slice((page - 1) * PER_PAGE, page * PER_PAGE));
-      setTotal(dummy.length);
+      setTotal(res.data.pagination.total || 0);
+    } catch {
+      toast.error("Failed to User list from server.");
     } finally {
       setLoading(false);
+      handleStates();
     }
   }, [page, query]);
 
@@ -46,6 +38,11 @@ const UserListPage = () => {
     fetchUsers();
   }, [fetchUsers]);
 
+  const handleStates = () => {
+    setEditing(null);
+    setShowForm(false);
+    setConfirm({ show: false, user: null });
+  };
   const handleAdd = () => {
     setEditing(null);
     setShowForm(true);
@@ -63,69 +60,56 @@ const UserListPage = () => {
   const confirmDelete = async () => {
     const u = confirm.user;
     try {
-      await api.delete(`/api/user/${u._id || u.id}`);
+      await api.delete(`/api/user/delete/${u._id || u.id}`);
       toast.success("User deleted");
-      setConfirm({ show: false, user: null });
       fetchUsers();
     } catch {
-      // fallback: remove locally
-      setUsers((prev) =>
-        prev.filter((x) => (x._id || x.id) !== (u._id || u.id)),
-      );
-      toast.success("User removed locally");
-      setConfirm({ show: false, user: null });
+      toast.error("Failed to delete user.");
+    } finally {
+      handleStates();
     }
   };
 
   const handleToggle = async (u) => {
     try {
-      await api.patch(`/api/user/${u._id || u.id}/toggle`, {
-        active: !u.active,
+      await api.patch(`/api/user/update`, {
+        userId: u._id || u.id,
+        isActive: !u.isActive,
       });
-      toast.success(`User ${u.active ? "disabled" : "enabled"}`);
+      toast.success(`User ${u.isActive ? "disabled" : "enabled"} successfully`);
       fetchUsers();
     } catch {
-      // fallback local toggle
-      setUsers((prev) =>
-        prev.map((x) => {
-          if ((x._id || x.id) === (u._id || u.id))
-            return { ...x, active: !x.active };
-          return x;
-        }),
-      );
-      toast.success("Toggled locally");
+      toast.error("Failed to toggle user status.");
+    } finally {
+      handleStates();
     }
   };
 
   const handleSave = async (data) => {
     try {
       if (editing) {
-        await api.put(`/api/user/${editing._id || editing.id}`, data);
-        toast.success("User updated");
+        await api.patch(`/api/user/update`, {
+          userId: editing._id || editing.id,
+          name: data.name,
+        });
+        toast.success("User updated successfully");
+        fetchUsers();
       } else {
-        await api.post(`/api/user`, data);
-        toast.success("User created");
+        await api.post(`/api/user/add`, {
+          name: data.name,
+          email: data.email,
+          isActive: data.isActive,
+        });
+        toast.success("User created successfully");
       }
-      setShowForm(false);
+      handleStates();
       fetchUsers();
     } catch (err) {
-      // fallback: local add/update
-      if (editing) {
-        setUsers((prev) =>
-          prev.map((x) =>
-            (x._id || x.id) === (editing._id || editing.id)
-              ? { ...x, ...data }
-              : x,
-          ),
-        );
-        toast.success("Updated locally");
-      } else {
-        const newUser = { _id: `local-${Date.now()}`, ...data };
-        setUsers((prev) => [newUser, ...prev]);
-        setTotal((t) => t + 1);
-        toast.success("Created locally");
-      }
-      setShowForm(false);
+      const msg =
+        err.response?.data?.error ||
+        err.response?.data?.message ||
+        "Failed to save user.";
+      toast.error(msg);
     }
   };
 
@@ -134,11 +118,13 @@ const UserListPage = () => {
   return (
     <div className="page-wrapper">
       <div className="container py-4">
-        <div className="d-flex justify-content-between align-items-center mb-3">
-          <h2 style={{ margin: 0 }}>Users</h2>
+        <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+          <h2 style={{ fontSize: "1.75rem", fontWeight: 700, marginBottom: 4 }}>
+            <span className="gradient-text">Users</span>
+          </h2>
           <div style={{ display: "flex", gap: 8 }}>
             <input
-              className="form-control-dark"
+              className="form-control-dark w-auto"
               placeholder="Search by name or email"
               value={query}
               onChange={(e) => {
@@ -160,12 +146,13 @@ const UserListPage = () => {
           ) : (
             <>
               <div className="table-responsive">
-                <table className="table" style={{ color: "var(--dark-text)" }}>
+                <table className="table  table-dark table-hover mb-0">
                   <thead>
                     <tr>
                       <th>ID</th>
                       <th>Name</th>
                       <th>Email</th>
+                      <th>Translation Count</th>
                       <th>Status</th>
                       <th>Actions</th>
                     </tr>
@@ -178,10 +165,11 @@ const UserListPage = () => {
                         </td>
                       </tr>
                     ) : (
-                      users.map((u) => (
+                      users.map((u, i) => (
                         <UserRow
                           key={u._id || u.id}
-                          user={u}
+                          userData={u}
+                          id={i + 1}
                           onEdit={handleEdit}
                           onDelete={handleDelete}
                           onToggle={handleToggle}
@@ -222,7 +210,9 @@ const UserListPage = () => {
             <UserForm
               initial={editing}
               onSave={handleSave}
-              onCancel={() => setShowForm(false)}
+              onCancel={() => {
+                (setShowForm(false), setEditing(null));
+              }}
             />
           </div>
         )}

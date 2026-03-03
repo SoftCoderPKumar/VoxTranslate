@@ -36,7 +36,7 @@ const authenticate = async (req, res, next) => {
 
         // Fetch fresh user data
         const user = await User.findById(decoded.id).select('-password');
-        if (!user || !user.isActive) {
+        if (!user || !user.isActive || user.isDeleted) {
             return res.status(401).json({
                 error: 'User not found or deactivated',
                 code: 'USER_NOT_FOUND',
@@ -53,17 +53,26 @@ const authenticate = async (req, res, next) => {
 };
 
 /**
+ * Middleware to authenticate admin users
  * Middleware to require admin role
  */
-const requireAdmin = (req, res, next) => {
-    if (req.user?.role !== 'admin') {
-        return res.status(403).json({
-            error: 'Admin privileges required',
-            code: 'FORBIDDEN',
-        });
+const requireAdmin = async (req, res, next) => {
+    try {
+        // Get token from HttpOnly cookie (primary) or Authorization header (fallback)
+        if (req.user?.role !== 'admin') {
+            return res.status(403).json({
+                error: 'Admin privileges required',
+                code: 'FORBIDDEN',
+            });
+        }
+        next();
+    } catch (error) {
+        logger.error('Admin authentication middleware error:', error);
+        res.status(500).json({ error: 'Admin authentication failed' });
     }
-    next();
 };
+
+
 
 /**
  * Optional authentication (proceeds even without token)
@@ -76,7 +85,7 @@ const optionalAuth = async (req, res, next) => {
         const { valid, decoded } = verifyAccessToken(token);
         if (valid) {
             const user = await User.findById(decoded.id).select('-password');
-            if (user && user.isActive) {
+            if (user && user.isActive && !user.isDeleted) {
                 req.user = user;
             }
         }

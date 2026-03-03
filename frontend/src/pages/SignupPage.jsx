@@ -244,6 +244,7 @@ const SignupPage = () => {
                       <i className="bi bi-envelope" />
                     </span>
                     <input
+                      autoComplete="username"
                       type="email"
                       className="form-control-dark"
                       style={{ paddingLeft: 40 }}
@@ -290,6 +291,7 @@ const SignupPage = () => {
                       <i className="bi bi-lock" />
                     </span>
                     <input
+                      autoComplete="new-password"
                       type={showPass ? "text" : "password"}
                       className="form-control-dark"
                       style={{ paddingLeft: 40, paddingRight: 44 }}
@@ -354,6 +356,7 @@ const SignupPage = () => {
                       <i className="bi bi-shield-lock" />
                     </span>
                     <input
+                      autoComplete="new-password"
                       type="password"
                       className="form-control-dark"
                       style={{ paddingLeft: 40 }}

@@ -106,6 +106,7 @@ const LoginPage = () => {
                       <i className="bi bi-envelope" />
                     </span>
                     <input
+                      autoComplete="username"
                       type="email"
                       className="form-control-dark"
                       style={{ paddingLeft: 40 }}
@@ -157,6 +158,7 @@ const LoginPage = () => {
                       <i className="bi bi-lock" />
                     </span>
                     <input
+                      autoComplete="current-password"
                       type={showPass ? "text" : "password"}
                       className="form-control-dark"
                       style={{ paddingLeft: 40, paddingRight: 44 }}

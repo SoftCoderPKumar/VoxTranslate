@@ -172,13 +172,144 @@ const deleteAccount = async (req, res, next) => {
 
         await revokeAllUserTokens(user._id);
         clearTokenCookies(res);
-        await User.findByIdAndUpdate(user._id, { isActive: false });
+        await User.findByIdAndUpdate(user._id, { isDeleted: true });
 
         res.status(200).json({ message: 'Account deactivated successfully' });
     } catch (error) {
         next(error);
     }
 };
+
+/**
+ * DELETE /api/user/delete
+ * Admin-only endpoint to delete a user account by user ID. This will mark the user as deleted and revoke all their tokens.
+ */
+const deleteUser = async (req, res, next) => {
+    try {
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            return res.status(400).json({ error: 'Validation failed', errors: errors.array() });
+        }
+        const { userId } = req.params;
+        const user = await User.findById(userId).select('role');
+
+
+        if (!user.role || user.role !== 'user') {
+            return res.status(400).json({ error: 'Can only delete regular user accounts' });
+        }
+        await revokeAllUserTokens(user._id);
+        await User.findByIdAndUpdate(user._id, { isDeleted: true });
+
+        res.status(200).json({ message: 'Account deactivated successfully' });
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * PUT /api/user/profile
+ */
+const updateUser = async (req, res, next) => {
+    try {
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            return res.status(400).json({ error: 'Validation failed', errors: errors.array() });
+        }
+
+        const { userId, name, isActive, role } = req.body;
+        const updates = {};
+        if (name) updates.name = name;
+        if (role) updates.role = role;
+        if (typeof isActive !== 'undefined' && typeof isActive === 'boolean') updates.isActive = isActive;
+
+
+        const user = await User.findByIdAndUpdate(
+            userId,
+            { $set: updates },
+            { new: true, runValidators: true }
+        );
+
+        if (user.isActive === false) {
+            await revokeAllUserTokens(user._id);
+        }
+        res.status(200).json({ message: 'Profile updated', user: user });
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * POST /api/user/add
+ * Admin-only endpoint to add a new user account. The request body should include name, email, password, and optionally role and isActive.
+ */
+const addUser = async (req, res, next) => {
+    try {
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            return res.status(400).json({ error: 'Validation failed', errors: errors.array() });
+        }
+
+        const { name, email, role, isActive } = req.body;
+        const password = "Password@123"; // Default temporary password, should be changed by user on first login
+        // Check existing user
+        const existing = await User.findOne({ email: email.toLowerCase() });
+        if (existing) {
+            return res.status(409).json({ error: 'Email already Registered' })
+        }
+
+        //Create user
+        const user = new User({ name, email, password, role: role || 'user', isActive: typeof isActive === 'boolean' ? isActive : true })
+        await user.save();
+        logger.info(`New user created:${email} with temporary password. ${password}`);
+        res.status(201).json({
+            message: 'Registration successful',
+            user: user
+        });
+    } catch (error) {
+        next(error)
+    }
+};
+
+
+/**
+ * GET /api/translate/history
+ */
+const getUsers = async (req, res, next) => {
+    try {
+        const { page = 1, limit = 10, q } = req.query;
+        const query = { isDeleted: false };
+        if (q) query.$and = [
+            {
+                $or: [
+                    { name: { $regex: decodeURIComponent(q), $options: "i" } },
+                    { email: { $regex: decodeURIComponent(q), $options: "i" } }
+                ]
+            }
+        ];
+        console.log("User query:", query, "Page:", page, "Limit:", limit);
+
+        const users = await User.find(query)
+            .sort({ createdAt: -1 })
+            .skip((page - 1) * limit)
+            .limit(parseInt(limit))
+            .lean();
+
+        const total = await User.countDocuments(query);
+
+        res.status(200).json({
+            users,
+            pagination: {
+                page: parseInt(page),
+                limit: parseInt(limit),
+                total,
+                pages: Math.ceil(total / limit),
+            },
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
 
 module.exports = {
     getProfile,
@@ -187,4 +318,8 @@ module.exports = {
     deleteApiKey,
     changePassword,
     deleteAccount,
+    getUsers,
+    deleteUser,
+    updateUser,
+    addUser
 };
