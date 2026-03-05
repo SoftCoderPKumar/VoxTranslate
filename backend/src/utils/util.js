@@ -4,6 +4,7 @@ const { PDFParse } = require("pdf-parse");
 const { Document } = require("@langchain/core/documents");
 const { splitterInstance, PineconeUpsertVectors } = require("./langchain");
 const { pineconeIndex } = require("./pineconeVectordb");
+const { CHAT_SYSTEM_PROMPT, QUERY_TRANSFORM_PROMPT } = require("./prompt");
 const exportData = {}
 const history = []
 
@@ -112,7 +113,8 @@ exportData.transformQuery = async (query, ai) => {
                 temperature: 0.1,    // Low temperature makes the response faster/more direct
             },
             config: {
-                systemInstruction: `You are a query rewriting expert. Based on the provided chat history, rephrase the "Follow Up user Question" into a complete, standalone question that can be understood without the chat history. Only output the rewritten question and nothing else.`,
+                systemInstruction: `${QUERY_TRANSFORM_PROMPT}`,
+
             },
         });
 
@@ -129,26 +131,28 @@ exportData.transformQuery = async (query, ai) => {
     }
 }
 
-exportData.chattingWithAI = async (queries, ai) => {
+exportData.chattingWithAI = async (context, queries, ai) => {
     try {
+        const prompt = `
+Context:
+${context}
+
+User Question:
+${queries}
+`;
         history.push({
             role: 'user',
-            parts: [{ text: queries }]
+            parts: [{ text: prompt }]
         })
         const response = await ai.models.generateContent({
             model: process.env.TEXT_MODEL || "gemini-3-flash-preview",
 
             contents: history.slice(-2),
-            // generationConfig: {
-            maxOutputTokens: 100, // Stop the model from "thinking" too long
-            temperature: 0.7,    // Low temperature makes the response faster/more direct
-
-            // },
+            maxOutputTokens: 300, // Stop the model from "thinking" too long
+            temperature: 0.3,    // Low temperature makes the response faster/more direct
             config: {
-                systemInstruction: `${process.env.SYSTEM_PROMPT}
-      
-                Context: ${queries}`,
-            },
+                systemInstruction: `${CHAT_SYSTEM_PROMPT}`
+            }
         });
         history.push({
             role: 'model',
