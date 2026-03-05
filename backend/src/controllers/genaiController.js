@@ -1,5 +1,5 @@
 const { validationResult } = require("express-validator");
-const { readAndParsePdfFiles, splitDocuments, vectorStoreInstance, uploadToVectorStore, transformQuery, chattingWithAI } = require("../utils/util");
+const { readAndParsePdfFiles, splitDocuments, vectorStoreInstance, uploadToVectorStore, transformQuery, chattingWithAI, generateGroqOrOpenaiInstance, transformQueryWithGroqOrOpenai, generateAnswerWithGroqOrOpenai } = require("../utils/util");
 const { embedderInstance, generativeAiInstance } = require("../utils/langchain");
 
 const exportData = {};
@@ -20,33 +20,38 @@ exportData.chatbotPost = async (req, res, next) => {
             return res.status(400).json({ error: 'Validation failed', errors: errors.array() });
         }
 
-        const { query } = req.body;
+        const { query, provider } = req.body;
+        const userId = req.user._id;
 
         // 1. Initialize the embedder
         const embedder = await embedderInstance();
 
         // 2. Initialize the generative AI model
-        const ai = await generativeAiInstance();
+        // const ai = await generativeAiInstance();
+        const ai = await generateGroqOrOpenaiInstance(provider, userId);
 
         // 3. Transform the user query to be more effective for retrieval
-        const queries = await transformQuery(query, ai);
-
-        // 4.  Convert the user query into embedding(vector)
-        const queryVector = await embedder.embedQuery(queries);
+        // const transformed Query = await transformQuery(query, ai);
+        const transformedQuery = await transformQueryWithGroqOrOpenai(query, ai, provider);
+        // 4.  Convert the transformed Query into embedding query using the embedder
+        const embeddedQuery = await embedder.embedQuery(transformedQuery);
 
         // 5. initialize the vector store
         const vectorStore = await vectorStoreInstance();
 
-        // 6. Search for relevant documents in the vector store using the query vector
-        const searchResults = await vectorStore.query({ topK: 2, vector: queryVector, includeMetadata: true, });
+        // 6. Search for relevant documents in the vector store using the embedded Query
+        const searchResults = await vectorStore.query({ topK: 5, vector: embeddedQuery, includeMetadata: true, });
 
         // 7. Extract the relevant context from the search results and generate a response using the language model
         const context = searchResults.matches
             .map(match => match.metadata.text)
-            .join("\n\n---\n\n");
+            .join("\n\n")
+        // .join("\n\n---\n\n"); 
+
 
         // 8. Generate the final response using the context and the original question
-        const finalResponse = await chattingWithAI(context, queries, ai);
+        // const finalResponse = await chattingWithAI(context, transformedQuery, ai);
+        const finalResponse = await generateAnswerWithGroqOrOpenai(context, transformedQuery, ai, provider);
 
         res.status(200).json({ status: true, message: 'Response generated successfully.', res: finalResponse });
     } catch (error) {

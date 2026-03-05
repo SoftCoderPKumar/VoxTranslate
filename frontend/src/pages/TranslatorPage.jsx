@@ -886,8 +886,8 @@ const TranslatorPage = () => {
           >
             <div style={{ fontSize: "0.875rem", color: "var(--dark-text)" }}>
               <i className="bi bi-info-circle text-orange me-2" />
-              Add your OpenAI API key to enable AI translation and voice
-              recognition.
+              Add your OpenAI or GroqAI API key to enable AI translation and
+              voice recognition.
             </div>
             <button
               onClick={() => navigate("/settings")}

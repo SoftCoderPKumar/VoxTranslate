@@ -4,7 +4,9 @@ const { PDFParse } = require("pdf-parse");
 const { Document } = require("@langchain/core/documents");
 const { splitterInstance, PineconeUpsertVectors } = require("./langchain");
 const { pineconeIndex } = require("./pineconeVectordb");
-const { CHAT_SYSTEM_PROMPT, QUERY_TRANSFORM_PROMPT } = require("./prompt");
+const { CHAT_SYSTEM_PROMPT, QUERY_TRANSFORM_PROMPT, GROQ_OPENAI_QUERY_TRANSFORM_SYSTEM_PROMPT } = require("./prompt");
+const { getGroqAIClient } = require("./groqaiApi");
+const { getOpenAIClient } = require("./openaiApi");
 const exportData = {}
 const history = []
 
@@ -99,6 +101,21 @@ exportData.uploadToVectorStore = async (chunkedDocs, embedder, vectorStore) => {
     }
 }
 
+exportData.generateGroqOrOpenaiInstance = async (provider, userId) => {
+    try {
+        if (provider === 'groq')
+            return await getGroqAIClient(userId);
+        else if (provider === 'openai')
+            return await getOpenAIClient(userId);
+        else
+            throw new Error('Unsupported provider');
+    } catch (error) {
+        throw new Error('Error generating AI client: ' + error.message);
+    }
+}
+
+
+
 exportData.transformQuery = async (query, ai) => {
     try {
         history.push({
@@ -106,7 +123,7 @@ exportData.transformQuery = async (query, ai) => {
             parts: [{ text: query }]
         })
         const response = await ai.models.generateContent({
-            model: process.env.TEXT_MODEL || "gemini-3-flash-preview",
+            model: "gemini-3-flash-preview",
             contents: history,
             generationConfig: {
                 maxOutputTokens: 100, // Stop the model from "thinking" too long
@@ -131,21 +148,21 @@ exportData.transformQuery = async (query, ai) => {
     }
 }
 
-exportData.chattingWithAI = async (context, queries, ai) => {
+exportData.chattingWithAI = async (context, transformedQuery, ai) => {
     try {
         const prompt = `
 Context:
 ${context}
 
 User Question:
-${queries}
+${transformedQuery}
 `;
         history.push({
             role: 'user',
             parts: [{ text: prompt }]
         })
         const response = await ai.models.generateContent({
-            model: process.env.TEXT_MODEL || "gemini-3-flash-preview",
+            model: "gemini-3-flash-preview",
 
             contents: history.slice(-2),
             maxOutputTokens: 300, // Stop the model from "thinking" too long
@@ -168,4 +185,77 @@ ${queries}
     }
 }
 
+exportData.transformQueryWithGroqOrOpenai = async (query, ai, provider) => {
+    try {
+        const model = provider === 'openai' ? 'gpt-4o-mini' : 'llama-3.3-70b-versatile'
+        const response = await ai.chat.completions.create({
+            model: model,
+            messages: [
+                { role: 'system', content: GROQ_OPENAI_QUERY_TRANSFORM_SYSTEM_PROMPT },
+                { role: 'user', content: query },
+            ],
+            temperature: 0,
+            response_format: { type: 'text' },
+        });
+        const result = response.choices[0].message.content.trim();
+        return result
+    }
+    catch (error) {
+        if (error.status === 429) {
+            throw new Error("Quota exceeded! Try again in a few seconds.");
+        } else if (error.message.includes("Unexpected token")) {
+            throw new Error("Received an invalid response from the AI provider. This may be a temporary issue. Please try again.");
+        } else {
+            throw new Error("An error occurred: " + error.message);
+        }
+    }
+}
+
+exportData.generateAnswerWithGroqOrOpenai = async (context, transformedQuery, ai, provider) => {
+    try {
+        history.push({
+            role: "user",
+            content: transformedQuery
+        });
+        const recentHistory = history.slice(-6);
+        const model = provider === 'openai' ? 'gpt-4o-mini' : 'llama-3.3-70b-versatile'
+        const prompt = `
+Context:
+${context}
+
+User Question:
+${transformedQuery}
+`;
+        const response = await ai.chat.completions.create({
+            model: model,
+            messages: [
+                { role: 'system', content: CHAT_SYSTEM_PROMPT },
+                ...recentHistory,
+                { role: 'user', content: prompt },
+            ],
+            temperature: 0.3,
+            response_format: { type: 'text' },
+        });
+
+        const answer = response.choices[0].message.content.trim();
+        console.log("AI Response:", answer);
+        history.push({
+            role: "assistant",
+            content: answer
+        });
+        if (history.length > 20) {
+            history.splice(0, history.length - 20);
+        }
+        return answer;
+    }
+    catch (error) {
+        if (error.status === 429) {
+            throw new Error("Quota exceeded! Try again in a few seconds.");
+        } else if (error.message.includes("Unexpected token")) {
+            throw new Error("Received an invalid response from the AI provider. This may be a temporary issue. Please try again.");
+        } else {
+            throw new Error("An error occurred: " + error.message);
+        }
+    }
+}
 module.exports = exportData

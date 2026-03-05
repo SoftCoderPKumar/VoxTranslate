@@ -9,6 +9,12 @@ import { Navigate } from "react-router-dom";
 
 const ChatbotPage = () => {
   const { user } = useAuth();
+  const initialProvider = user.hasGroqApiKey
+    ? "groq"
+    : user.hasOpenApiKey
+      ? "openai"
+      : null;
+  const [provider, setProvider] = useState(initialProvider); // null | 'groq' | 'openai'
   const [messages, setMessages] = useState([
     {
       id: 1,
@@ -95,14 +101,16 @@ const ChatbotPage = () => {
   };
 
   //fetch Language
-  const fetchQueryAnswer = useCallback(async (query) => {
+  const fetchQueryAnswer = async (query) => {
     try {
+      if (!provider) {
+        toast.error("No AI provider configured.");
+        return;
+      }
       const response = await api.post("/api/genai/chatbot", {
         query,
+        provider,
       });
-      console.log("API response:", response, response.data);
-      if (!response.status || response.status >= 400)
-        throw new Error(response.message || "Server side error");
       return response.data.res;
     } catch (err) {
       const msg =
@@ -115,21 +123,93 @@ const ChatbotPage = () => {
     } finally {
       setIsThinking(false);
     }
-  }, []);
+  };
 
   return (
     <div className="page-wrapper" style={{ background: "var(--dark-bg)" }}>
       <div className="container py-4">
-        <div className="d-flex justify-content-between align-items-center mb-4">
+        <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
           <div>
-            <h1 style={{ fontSize: "1.6rem", fontWeight: 700 }}>
+            <h1
+              style={{ fontSize: "1.75rem", fontWeight: 700, marginBottom: 4 }}
+            >
               <span className="gradient-text">Medical Assistant</span>
             </h1>
-            <p style={{ color: "var(--dark-muted)", margin: 0 }}>
+            <p
+              style={{
+                color: "var(--dark-muted)",
+                margin: 0,
+                fontSize: "0.9rem",
+              }}
+            >
+              {user?.hasOpenApiKey || user?.hasGroqApiKey
+                ? "✅ AI translation enabled"
+                : "⚠️ No API key — using browser translation"}
+            </p>
+            <p
+              style={{
+                color: "var(--dark-muted)",
+                margin: 0,
+                fontSize: "0.9rem",
+              }}
+            >
               Ask by typing or using audio. Responses are powered by your
               configured AI provider.
             </p>
           </div>
+          {/* provider Toggle  */}
+          {(user?.hasOpenApiKey || user?.hasGroqApiKey) && (
+            <div
+              style={{
+                background: "var(--dark-surface)",
+                border: "1px solid var(--dark-border)",
+                borderRadius: "var(--radius-full)",
+                padding: 4,
+                display: "flex",
+              }}
+            >
+              {[
+                { id: "groq", label: "GroqAI", icon: "bi bi-lightning-charge" },
+                {
+                  id: "openai",
+                  label: "OpenAI",
+                  icon: "bi bi-openai",
+                },
+              ].map((m) => (
+                <button
+                  key={m.id}
+                  onClick={() => setProvider(m.id)}
+                  style={{
+                    background:
+                      provider === m.id
+                        ? "linear-gradient(135deg, var(--green-primary), var(--green-light))"
+                        : "transparent",
+                    color: provider === m.id ? "white" : "var(--dark-muted)",
+                    border: "none",
+                    borderRadius: "var(--radius-full)",
+                    padding: "8px 20px",
+                    fontWeight: 600,
+                    fontSize: "0.88rem",
+                    cursor: "pointer",
+                    transition: "var(--transition)",
+                    fontFamily: "var(--font-body)",
+                  }}
+                  className={
+                    (m.id == "openai" && !user?.hasOpenApiKey) ||
+                    (m.id == "groq" && !user?.hasGroqApiKey)
+                      ? "d-none"
+                      : ""
+                  }
+                >
+                  {
+                    <>
+                      <i className={m.icon}></i> {m.label}
+                    </>
+                  }
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="card-dark p-3 chat-container">
@@ -159,6 +239,38 @@ const ChatbotPage = () => {
             />
           </div>
         </div>
+        {/* API Key Warning */}
+
+        {!user?.hasOpenApiKey && !user?.hasGroqApiKey && (
+          <div
+            style={{
+              background: "rgba(255,107,26,0.08)",
+              border: "1px solid rgba(255,107,26,0.25)",
+              borderRadius: "var(--radius-md)",
+              padding: "12px 16px",
+              marginTop: 16,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              flexWrap: "wrap",
+              gap: 8,
+            }}
+          >
+            <div style={{ fontSize: "0.875rem", color: "var(--dark-text)" }}>
+              <i className="bi bi-info-circle text-orange me-2" />
+              Add your OpenAI or GroqAI API key to enable AI translation and
+              voice recognition.
+            </div>
+            <button
+              onClick={() => Navigate("/settings")}
+              className="btn btn-sm btn-outline-orange"
+              style={{ fontSize: "0.8rem", padding: "5px 14px" }}
+            >
+              <i className="bi bi-key me-1" />
+              Add API Key
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

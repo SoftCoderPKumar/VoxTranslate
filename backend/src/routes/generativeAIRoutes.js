@@ -2,13 +2,20 @@ const express = require('express');
 const { chatbotPost, embeddingVectorPost } = require('../controllers/genaiController');
 const { authenticate } = require('../middleware/auth');
 const { body } = require('express-validator');
+const { PROVIDER_TYPES } = require('../utils/content');
 
 
 const router = express.Router();
 router.use(authenticate);
 
 const chatbotValidation = [
-    body('query').trim().notEmpty().withMessage('query is required').isLength({ min: 5 }).withMessage('Query must be at least 5 characters')
+    body('query').trim().notEmpty().withMessage('query is required').isLength({ min: 5 }).withMessage('Query must be at least 5 characters'),
+    body('provider')
+        .trim()
+        .notEmpty().withMessage('Provider is required')
+        .isIn(PROVIDER_TYPES)
+        .withMessage(`Provider must be one of: ${PROVIDER_TYPES.join(', ')}`)
+        .isString(),
 ];
 
 const embeddingValidation = [
