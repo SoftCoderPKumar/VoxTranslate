@@ -7,7 +7,7 @@ const exportData = {}
 exportData.getGroqAIClient = async (userId) => {
     const user = await User.findById(userId);
     const userKey = user?.getApiKey('groq');
-    const apiKey = userKey || process.env.GROQ_API_KEY;
+    const apiKey = userKey || "" //process.env.GROQ_API_KEY;
 
     if (!apiKey) {
         throw new Error('No Groq API key configured. Please add your API key in settings.');

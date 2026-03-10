@@ -4,11 +4,14 @@ const { PDFParse } = require("pdf-parse");
 const { Document } = require("@langchain/core/documents");
 const { splitterInstance, PineconeUpsertVectors } = require("./langchain");
 const { pineconeIndex } = require("./pineconeVectordb");
-const { CHAT_SYSTEM_PROMPT, QUERY_TRANSFORM_PROMPT, GROQ_OPENAI_QUERY_TRANSFORM_SYSTEM_PROMPT } = require("./prompt");
+const { CHAT_SYSTEM_PROMPT, QUERY_TRANSFORM_PROMPT, GROQ_OPENAI_QUERY_TRANSFORM_SYSTEM_PROMPT2, QUA_ANS_TALK_SYSTEM_PROMPT } = require("./prompt");
 const { getGroqAIClient } = require("./groqaiApi");
 const { getOpenAIClient } = require("./openaiApi");
 const exportData = {}
-const history = []
+const history = [];
+const QAhistory = [];
+const sessions = {};
+
 
 
 exportData.readAndParsePdfFiles = async (folderName) => {
@@ -191,7 +194,7 @@ exportData.transformQueryWithGroqOrOpenai = async (query, ai, provider) => {
         const response = await ai.chat.completions.create({
             model: model,
             messages: [
-                { role: 'system', content: GROQ_OPENAI_QUERY_TRANSFORM_SYSTEM_PROMPT },
+                { role: 'system', content: GROQ_OPENAI_QUERY_TRANSFORM_SYSTEM_PROMPT2 },
                 { role: 'user', content: query },
             ],
             temperature: 0,
@@ -213,15 +216,18 @@ exportData.transformQueryWithGroqOrOpenai = async (query, ai, provider) => {
 
 exportData.generateAnswerWithGroqOrOpenai = async (context, transformedQuery, ai, provider) => {
     try {
-        history.push({
+        QAhistory.push({
             role: "user",
             content: transformedQuery
         });
-        const recentHistory = history.slice(-6);
+        const recentHistory = QAhistory.slice(-6);
         const model = provider === 'openai' ? 'gpt-4o-mini' : 'llama-3.3-70b-versatile'
         const prompt = `
 Context:
 ${context}
+
+Conversation History:
+${recentHistory}
 
 User Question:
 ${transformedQuery}
@@ -238,13 +244,12 @@ ${transformedQuery}
         });
 
         const answer = response.choices[0].message.content.trim();
-        console.log("AI Response:", answer);
-        history.push({
+        QAhistory.push({
             role: "assistant",
             content: answer
         });
-        if (history.length > 20) {
-            history.splice(0, history.length - 20);
+        if (QAhistory.length > 20) {
+            QAhistory.splice(0, QAhistory.length - 20);
         }
         return answer;
     }
@@ -257,5 +262,48 @@ ${transformedQuery}
             throw new Error("An error occurred: " + error.message);
         }
     }
+}
+
+exportData.questionAnswerWithGroqOrOpenai = async (question = "", studentAnswer = "", session, ai, provider, userId) => {
+    try {
+
+        const userPrompt = `\nPlease analyze the following English paragraph and provide corrections, ai_response and explanations according to the system prompt.\nTopic: ${session.topic || ""}\nPrevious Difficulty: ${session.difficulty}\nQuestion:${question || ""} \nStudent Answer: ${studentAnswer || ""}\n`;
+        const model = provider === 'openai' ? 'gpt-4o-mini' : 'llama-3.3-70b-versatile'
+        const response = await ai.chat.completions.create({
+            model: model,
+            messages: [
+                { role: 'system', content: QUA_ANS_TALK_SYSTEM_PROMPT },
+                { role: 'user', content: userPrompt },
+            ],
+            max_tokens: 800,
+            temperature: 0.3,
+            top_p: 0.9,
+            response_format: { type: "json_object" },
+        });
+        const content = response.choices[0].message.content.trim();
+        return content;
+    } catch (error) {
+        if (error.status === 429) {
+            throw new Error("Quota exceeded! Try again in a few seconds.");
+        } else if (error.message.includes("Unexpected token")) {
+            throw new Error("Received an invalid response from the AI provider. This may be a temporary issue. Please try again.");
+        } else {
+            throw new Error("An error occurred: " + error.message);
+        }
+    }
+}
+
+exportData.getSession = async (userId) => {
+    if (!sessions[userId]) {
+        sessions[userId] = {
+            topic: null,
+            difficulty: "Beginner"
+        };
+    }
+    return sessions[userId];
+}
+
+exportData.updateDifficulty = async (userId, level) => {
+    sessions[userId].difficulty = level;
 }
 module.exports = exportData

@@ -5,6 +5,7 @@
 const exportData = {};
 
 exportData.PROVIDER_TYPES = ['openai', 'groq'];
+exportData.DIFFICULTY_LEVEL = ['Beginner', "Elementary", "Intermediate", "Upper-Intermediate", "Advanced", "Expert"]
 exportData.TRANSLATION_INPUT_TYPES = ['audio', 'text'];
 exportData.REFRESH_TOKEN_PREFIX = 'refresh_token:';
 exportData.REFRESH_TOKEN_TTL = 7 * 24 * 60 * 60; // 7 days in seconds
