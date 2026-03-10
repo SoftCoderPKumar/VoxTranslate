@@ -402,4 +402,48 @@ Do NOT include explanations outside JSON.
 If there are no errors return:
 
 "errors": []`
+
+exportData.QUERY_REWRITE_PROMPT = (history = [], question = "") => `
+You are a query rewriting expert.
+
+Your job:
+Convert a follow-up question into a clear standalone query.
+
+Rules:
+1. Use the conversation history to understand context.
+2. Rewrite the question so it is fully understandable without history.
+3. Do NOT answer the question.
+4. ONLY return the rewritten query.
+
+Conversation History:
+${history}
+
+User Question:
+${question}
+
+Rewritten Query:
+`;
+
+exportData.ANSWER_PROMPT = (history, context, question) => `
+You are a helpful AI assistant.
+
+Use ONLY the provided context to answer the question.
+
+Rules:
+1. If the answer is not in the context, say "I don't know".
+2. Keep answers clear and concise.
+3. Do not hallucinate.
+
+Conversation History:
+${history}
+
+Context:
+${context}
+
+Question:
+${question}
+
+Answer:
+`;
+
 module.exports = exportData;

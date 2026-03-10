@@ -4,7 +4,7 @@ const { PDFParse } = require("pdf-parse");
 const { Document } = require("@langchain/core/documents");
 const { splitterInstance, PineconeUpsertVectors } = require("./langchain");
 const { pineconeIndex } = require("./pineconeVectordb");
-const { CHAT_SYSTEM_PROMPT, QUERY_TRANSFORM_PROMPT, GROQ_OPENAI_QUERY_TRANSFORM_SYSTEM_PROMPT2, QUA_ANS_TALK_SYSTEM_PROMPT } = require("./prompt");
+const { CHAT_SYSTEM_PROMPT, QUERY_TRANSFORM_PROMPT, GROQ_OPENAI_QUERY_TRANSFORM_SYSTEM_PROMPT2, QUA_ANS_TALK_SYSTEM_PROMPT, QUERY_REWRITE_PROMPT } = require("./prompt");
 const { getGroqAIClient } = require("./groqaiApi");
 const { getOpenAIClient } = require("./openaiApi");
 const exportData = {}
@@ -190,12 +190,16 @@ ${transformedQuery}
 
 exportData.transformQueryWithGroqOrOpenai = async (query, ai, provider) => {
     try {
-        const model = provider === 'openai' ? 'gpt-4o-mini' : 'llama-3.3-70b-versatile'
+        const model = provider === 'openai' ? 'gpt-4o-mini' : 'llama-3.3-70b-versatile';
+
+        const historyText = QAhistory
+            .map(m => `${m.role}: ${m.content}`)
+            .join("\n");
+
         const response = await ai.chat.completions.create({
             model: model,
             messages: [
-                { role: 'system', content: GROQ_OPENAI_QUERY_TRANSFORM_SYSTEM_PROMPT2 },
-                { role: 'user', content: query },
+                { role: 'user', content: QUERY_REWRITE_PROMPT(historyText, query) },
             ],
             temperature: 0,
             response_format: { type: 'text' },
@@ -214,29 +218,21 @@ exportData.transformQueryWithGroqOrOpenai = async (query, ai, provider) => {
     }
 }
 
-exportData.generateAnswerWithGroqOrOpenai = async (context, transformedQuery, ai, provider) => {
+exportData.generateAnswerWithGroqOrOpenai = async (context, query, ai, provider) => {
     try {
-        QAhistory.push({
-            role: "user",
-            content: transformedQuery
-        });
+
         const recentHistory = QAhistory.slice(-6);
+        const historyText = recentHistory
+            .map(m => `${m.role}: ${m.content}`)
+            .join("\n");
+
+
         const model = provider === 'openai' ? 'gpt-4o-mini' : 'llama-3.3-70b-versatile'
-        const prompt = `
-Context:
-${context}
-
-Conversation History:
-${recentHistory}
-
-User Question:
-${transformedQuery}
-`;
+        const prompt = `\nContext:\n${context}\n\nConversation History:\n${historyText}\n\nUser Question:\n${query}\n Answer the question using ONLY the context.`;
         const response = await ai.chat.completions.create({
             model: model,
             messages: [
                 { role: 'system', content: CHAT_SYSTEM_PROMPT },
-                ...recentHistory,
                 { role: 'user', content: prompt },
             ],
             temperature: 0.3,
@@ -244,13 +240,14 @@ ${transformedQuery}
         });
 
         const answer = response.choices[0].message.content.trim();
-        QAhistory.push({
-            role: "assistant",
-            content: answer
-        });
+
+        QAhistory.push({ role: "user", content: query });
+        QAhistory.push({ role: "assistant", content: answer });
+
         if (QAhistory.length > 20) {
             QAhistory.splice(0, QAhistory.length - 20);
         }
+
         return answer;
     }
     catch (error) {

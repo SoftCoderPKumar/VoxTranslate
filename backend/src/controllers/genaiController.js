@@ -48,10 +48,9 @@ exportData.chatbotPost = async (req, res, next) => {
             .join("\n\n")
         // .join("\n\n---\n\n"); 
 
-
         // 8. Generate the final response using the context and the original question
         // const finalResponse = await chattingWithAI(context, transformedQuery, ai);
-        const finalResponse = await generateAnswerWithGroqOrOpenai(context, transformedQuery, ai, provider);
+        const finalResponse = await generateAnswerWithGroqOrOpenai(context, query, ai, provider);
 
         res.status(200).json({ status: true, message: 'Response generated successfully.', res: finalResponse });
     } catch (error) {
