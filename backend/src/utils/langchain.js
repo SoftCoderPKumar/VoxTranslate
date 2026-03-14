@@ -12,7 +12,7 @@ exportData.splitterInstance = async (configInfo = {}) => {
         chunkSize: configInfo?.chunkSize || 1000,
         chunkOverlap: configInfo?.chunkOverlap || 200,
         keepSeparator: configInfo?.keepSeparator || true,
-        separators: configInfo?.separators || ["\n\n", "\n", ".", "!", "?", " ", ""]
+        separators: configInfo?.separators || ["\n\n", "\n", ". ", "!", "?", " ", ""]
     }
     return new RecursiveCharacterTextSplitter(fields);
 }

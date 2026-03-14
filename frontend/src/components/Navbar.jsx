@@ -9,6 +9,7 @@ const Navbar = () => {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [adminOpen, setAdminOpen] = useState(false);
+  const [aiAssistantOpen, setAiAssistantOpen] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
@@ -19,9 +20,16 @@ const Navbar = () => {
   useEffect(() => {
     setMenuOpen(false);
     setAdminOpen(false);
+    setAiAssistantOpen(false);
   }, [location]);
 
-  const isActive = (path) => location.pathname === path;
+  const isActive = (path) => {
+    if (typeof path === "string") {
+      return location.pathname === path;
+    } else if (Array.isArray(path)) {
+      return path.includes(location.pathname);
+    }
+  };
 
   const handleLogout = async () => {
     await logout();
@@ -94,51 +102,105 @@ const Navbar = () => {
             )}
             {user && (
               <>
-                <li className="nav-item">
-                  <Link
-                    to="/translate"
+                <li
+                  className="nav-item dropdown"
+                  style={{ position: "relative" }}
+                >
+                  <button
                     className="nav-link px-3"
+                    onClick={() => setAiAssistantOpen((v) => !v)}
                     style={{
-                      color: isActive("/translate")
+                      background: "transparent",
+                      border: "none",
+                      color: isActive([
+                        "/translate",
+                        "/speech-translate",
+                        "/chatbot",
+                      ])
                         ? "var(--orange-primary)"
                         : "var(--dark-muted)",
-                      fontWeight: isActive("/translate") ? 600 : 400,
+                      fontWeight: isActive([
+                        "/translate",
+                        "/speech-translate",
+                        "/chatbot",
+                      ])
+                        ? 600
+                        : 400,
+                      cursor: "pointer",
                     }}
+                    aria-expanded={aiAssistantOpen}
                   >
-                    <i className="bi bi-record-circle me-1" />
-                    Translator
-                  </Link>
+                    <i class="bi bi-openai me-1"></i>
+                    AI Assistant
+                    <i
+                      className={`bi bi-caret-${aiAssistantOpen ? "up" : "down"}-fill ms-2`}
+                    />
+                  </button>
+                  {aiAssistantOpen && (
+                    <ul
+                      className="card-dark"
+                      style={{
+                        zIndex: 100,
+                        position: "absolute",
+                        top: "48px",
+                        left: 0,
+                        minWidth: 180,
+                        borderRadius: 8,
+                        padding: 8,
+                        listStyle: "none",
+                      }}
+                    >
+                      <li style={{ padding: 6 }}>
+                        <Link
+                          className="text-decoration-none"
+                          to="/translate"
+                          style={{
+                            color: isActive("/translate")
+                              ? "var(--orange-primary)"
+                              : "var(--dark-muted)",
+                            fontWeight: isActive("/translate") ? 600 : 400,
+                          }}
+                        >
+                          <i className="bi bi-record-circle me-1" />
+                          Translator
+                        </Link>
+                      </li>
+                      <li style={{ padding: 6 }}>
+                        <Link
+                          className="text-decoration-none"
+                          to="/speech-translate"
+                          style={{
+                            color: isActive("/speech-translate")
+                              ? "var(--orange-primary)"
+                              : "var(--dark-muted)",
+                            fontWeight: isActive("/speech-translate")
+                              ? 600
+                              : 400,
+                          }}
+                        >
+                          <i className="bi bi-mic-fill me-1" />
+                          Speech
+                        </Link>
+                      </li>
+                      <li style={{ padding: 6 }}>
+                        <Link
+                          className="text-decoration-none"
+                          to="/chatbot"
+                          style={{
+                            color: isActive("/chatbot")
+                              ? "var(--orange-primary)"
+                              : "var(--dark-muted)",
+                            fontWeight: isActive("/chatbot") ? 600 : 400,
+                          }}
+                        >
+                          <i className="bi bi-chat-dots me-1" />
+                          Medi-assistant
+                        </Link>
+                      </li>
+                    </ul>
+                  )}
                 </li>
-                <li className="nav-item">
-                  <Link
-                    to="/speech-translate"
-                    className="nav-link px-3"
-                    style={{
-                      color: isActive("/speech-translate")
-                        ? "var(--orange-primary)"
-                        : "var(--dark-muted)",
-                      fontWeight: isActive("/speech-translate") ? 600 : 400,
-                    }}
-                  >
-                    <i className="bi bi-mic-fill me-1" />
-                    Speech
-                  </Link>
-                </li>
-                <li className="nav-item">
-                  <Link
-                    to="/chatbot"
-                    className="nav-link px-3"
-                    style={{
-                      color: isActive("/chatbot")
-                        ? "var(--orange-primary)"
-                        : "var(--dark-muted)",
-                      fontWeight: isActive("/chatbot") ? 600 : 400,
-                    }}
-                  >
-                    <i className="bi bi-chat-dots me-1" />
-                    Medi-assistant
-                  </Link>
-                </li>
+
                 {user.role === "admin" && (
                   <>
                     <li
@@ -151,10 +213,10 @@ const Navbar = () => {
                         style={{
                           background: "transparent",
                           border: "none",
-                          color: isActive("/users")
+                          color: isActive(["/users"])
                             ? "var(--orange-primary)"
                             : "var(--dark-muted)",
-                          fontWeight: isActive("/users") ? 600 : 400,
+                          fontWeight: isActive(["/users"]) ? 600 : 400,
                           cursor: "pointer",
                         }}
                         aria-expanded={adminOpen}
@@ -189,19 +251,10 @@ const Navbar = () => {
                                 fontWeight: isActive("/users") ? 600 : 400,
                               }}
                             >
+                              <i class="bi bi-people me-1"></i>
                               User List
                             </Link>
                           </li>
-                          {/* <li style={{ padding: 6 }}>
-                            <Link className="text-decoration-none" to="#">
-                              Reports
-                            </Link>
-                          </li>
-                          <li style={{ padding: 6 }}>
-                            <Link className="text-decoration-none" to="#">
-                              Integrations
-                            </Link>
-                          </li> */}
                         </ul>
                       )}
                     </li>
