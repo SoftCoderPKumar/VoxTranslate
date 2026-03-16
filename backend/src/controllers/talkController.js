@@ -1,5 +1,5 @@
 const { validationResult } = require("express-validator");
-const { getSession, generateGroqOrOpenaiInstance, questionAnswerWithGroqOrOpenai, updateDifficulty } = require("../utils/util");
+const { getSession, generateGroqOrOpenaiInstance, questionAnswerWithGroqOrOpenai, updateDifficulty, validateErrorPosition, checkUnknownError } = require("../utils/util");
 
 const exportData = {};
 
@@ -39,6 +39,9 @@ exportData.talkAboutAnything = async (req, res, next) => {
         if (jsonResponse.difficulty_level) {
             updateDifficulty(userId, difficultyLevel);
         }
+        jsonResponse = await validateErrorPosition(jsonResponse);
+        jsonResponse = await checkUnknownError(jsonResponse);
+
         res.status(200).json({ status: true, message: 'Response generated successfully.', res: jsonResponse });
     } catch (error) {
         next(error)

@@ -303,4 +303,64 @@ exportData.getSession = async (userId) => {
 exportData.updateDifficulty = async (userId, level) => {
     sessions[userId].difficulty = level;
 }
+
+exportData.validateErrorPosition = async (jsonResponse) => {
+    if (Array.isArray(jsonResponse.errors) && jsonResponse.errors.length) {
+        const errors = jsonResponse.errors;
+        const correctAns = jsonResponse.corrected;
+        const correctAnsArray = correctAns.split(" ")
+        errors.map((error) => {
+            if (correctAnsArray[error.position] != error.corrected_phrase) {
+                for (let i = error.position; i < correctAnsArray.length; i++) {
+                    if (correctAnsArray[i] === error.corrected_phrase) {
+                        error.position = i;
+                        break;
+                    }
+                }
+            }
+            return error
+        })
+    }
+    return jsonResponse;
+}
+
+exportData.checkUnknownError = async (responseData) => {
+    const correctAns = responseData.corrected;
+    const originalAns = responseData.original;
+    const correctAnsArray = correctAns.split(" ");
+    const originalAnsArray = originalAns.split(" ");
+    const positionSet = new Set();
+    if (Array.isArray(responseData.errors)) {
+        const errors = responseData.errors;
+        errors.forEach((error) => {
+            positionSet.add(error.position)
+            const errorWordArr = error.corrected_phrase.split(" ")
+            if (errorWordArr.length > 1) {
+                for (let i = 1; i < errorWordArr.length; i++) {
+                    positionSet.add(error.position + i)
+                }
+            }
+        })
+        const positionArr = [...positionSet]
+        correctAnsArray.forEach((item, index) => {
+            if (item !== originalAnsArray[index]) {
+                if (!positionArr.includes(index) && originalAnsArray[index]) {
+                    if (item.toLowerCase() === originalAnsArray[index].toLowerCase()) {
+                        responseData.errors.push({
+                            "type": "capitalization",
+                            "original_phrase": originalAnsArray[index],
+                            "corrected_phrase": item,
+                            "explanation": `${originalAnsArray[index]} should always be capitalized.`,
+                            "position": index
+                        })
+                    }
+                }
+
+            }
+        });
+    }
+    return responseData;
+
+
+}
 module.exports = exportData

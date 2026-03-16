@@ -116,6 +116,7 @@ const Navbar = () => {
                         "/translate",
                         "/speech-translate",
                         "/chatbot",
+                        "/ai-tutor",
                       ])
                         ? "var(--orange-primary)"
                         : "var(--dark-muted)",
@@ -123,6 +124,7 @@ const Navbar = () => {
                         "/translate",
                         "/speech-translate",
                         "/chatbot",
+                        "/ai-tutor",
                       ])
                         ? 600
                         : 400,
@@ -130,7 +132,7 @@ const Navbar = () => {
                     }}
                     aria-expanded={aiAssistantOpen}
                   >
-                    <i class="bi bi-openai me-1"></i>
+                    <i className="bi bi-openai me-1"></i>
                     AI Assistant
                     <i
                       className={`bi bi-caret-${aiAssistantOpen ? "up" : "down"}-fill ms-2`}
@@ -161,7 +163,7 @@ const Navbar = () => {
                             fontWeight: isActive("/translate") ? 600 : 400,
                           }}
                         >
-                          <i className="bi bi-record-circle me-1" />
+                          <i className="bi bi-translate me-1"></i>
                           Translator
                         </Link>
                       </li>
@@ -195,6 +197,21 @@ const Navbar = () => {
                         >
                           <i className="bi bi-chat-dots me-1" />
                           Medi-assistant
+                        </Link>
+                      </li>
+                      <li style={{ padding: 6 }}>
+                        <Link
+                          className="text-decoration-none"
+                          to="/ai-tutor"
+                          style={{
+                            color: isActive("/ai-tutor")
+                              ? "var(--orange-primary)"
+                              : "var(--dark-muted)",
+                            fontWeight: isActive("/ai-tutor") ? 600 : 400,
+                          }}
+                        >
+                          <i className="bi bi-book me-1" />
+                          AI Tutor
                         </Link>
                       </li>
                     </ul>
@@ -251,7 +268,7 @@ const Navbar = () => {
                                 fontWeight: isActive("/users") ? 600 : 400,
                               }}
                             >
-                              <i class="bi bi-people me-1"></i>
+                              <i className="bi bi-people me-1"></i>
                               User List
                             </Link>
                           </li>

@@ -21,6 +21,7 @@ import NotFoundPage from "./pages/NotFoundPage";
 import SpeechTranslatorPage from "./pages/SpeechTranslatorPage";
 import ChatbotPage from "./pages/ChatbotPage";
 import UserListPage from "./pages/UserListPage";
+import AiTutorPage from "./pages/AiTutorPage";
 
 // Components
 import Navbar from "./components/Navbar";
@@ -146,6 +147,16 @@ const AppRoutes = () => {
           element={
             <ProtectedRoute>
               <SettingsPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* AI Tutor Page */}
+        <Route
+          path="/ai-tutor"
+          element={
+            <ProtectedRoute>
+              <AiTutorPage />
             </ProtectedRoute>
           }
         />
