@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import "./AiTutorPage.css";
 import api from "../utils/api";
 import toast from "react-hot-toast";
@@ -21,6 +21,7 @@ const AiTutorPage = () => {
   const speakMsgRef = useRef(null);
   const speed = 15;
   const [isPlayingGreetingText, setIsPlayingGreetingText] = useState(false);
+  const [playingActiveBtn, setPlayingActiveBtn] = useState(null);
   const [topic, setTopic] = useState("");
   const [isInvalidTopic, setIsInvalidTopic] = useState(false);
   const [topicError, setTopicError] = useState(null);
@@ -79,7 +80,10 @@ const AiTutorPage = () => {
         setIsPlayingGreetingText(true);
         stopRecording();
       };
-      utterance.onend = () => setIsPlayingGreetingText(false);
+      utterance.onend = () => {
+        setIsPlayingGreetingText(false);
+        setPlayingActiveBtn(null);
+      };
       utterance.rate = 1;
       utterance.pitch = 1;
       utterance.volume = 1;
@@ -91,6 +95,7 @@ const AiTutorPage = () => {
     if ("speechSynthesis" in window) {
       window.speechSynthesis.cancel();
       setIsPlayingGreetingText(false);
+      setPlayingActiveBtn(null);
     }
   };
 
@@ -127,6 +132,7 @@ const AiTutorPage = () => {
     if ("speechSynthesis" in window) {
       setIsSpeaking(false);
       setIsPlayingGreetingText(false);
+      setPlayingActiveBtn(null);
     }
   };
 
@@ -205,6 +211,7 @@ const AiTutorPage = () => {
     setBrowserTranscript("");
     setIsPlayingGreetingText(false);
     setUserAnswer("");
+    setPlayingActiveBtn(null);
   };
   const copyToClipboard = (text) => {
     navigator.clipboard
@@ -324,13 +331,13 @@ const AiTutorPage = () => {
         ...prev,
         {
           type: "ai_response",
-          text: data.ai_response ?? "",
-          original: data.original ?? "",
-          corrected: data.corrected ?? "",
-          errors: data.errors ?? [],
-          evaluation: data.evaluation ?? {},
-          suggestion: data.suggestion ?? {},
-          nextQuestion: data.next_question ?? "",
+          text: data.ai_response,
+          original: data.original,
+          corrected: data.corrected,
+          errors: data.errors,
+          evaluation: data.evaluation,
+          suggestion: data.suggestion,
+          nextQuestion: data.next_question,
         },
       ]);
 
@@ -356,7 +363,7 @@ const AiTutorPage = () => {
     if (!errors || errors.length === 0) return text;
 
     errors.sort((a, b) => a.position - b.position);
-
+    console.log("errors", errors);
     const parts = [];
     let lastWordIndex = 0;
     const textArr = text.split(" ");
@@ -366,27 +373,31 @@ const AiTutorPage = () => {
         const errTextArr = error.corrected_phrase.split(" ");
 
         const beforeError = textArr.slice(lastWordIndex, error.position);
-
-        const errorTextArr = textArr.slice(
-          error.position,
-          error.position + errTextArr.length,
-        );
-
-        const errorText = errorTextArr.join(" ");
+        console.log("beforeError", beforeError);
 
         if (beforeError) parts.push(beforeError.join(" "));
-        parts.push(
-          <span
-            key={index}
-            className="error-highlight"
-            onClick={() => setSelectedError(error)}
-            title="Click to see error details"
-          >
-            {errorText}
-          </span>,
-        );
+        if (lastWordIndex <= error.position) {
+          const errorTextArr = textArr.slice(
+            error.position,
+            error.position + errTextArr.length,
+          );
+
+          const errorText = errorTextArr.join(" ");
+          console.log("errorText", errorText);
+          parts.push(
+            <span
+              key={index}
+              className="error-highlight"
+              onClick={() => setSelectedError(error)}
+              title="Click to see error details"
+            >
+              {errorText}
+            </span>,
+          );
+        }
 
         lastWordIndex = error.position + errTextArr.length;
+        console.log("lastWordIndex", lastWordIndex);
       }
     });
 
@@ -521,6 +532,7 @@ const AiTutorPage = () => {
                     </div>
                     <button
                       onClick={() => {
+                        setPlayingActiveBtn("greet-btn");
                         isPlayingGreetingText
                           ? muteGreetingText()
                           : speakGreetingText(speakMsgRef.current);
@@ -536,7 +548,7 @@ const AiTutorPage = () => {
                       title={`${isPlayingGreetingText ? "Stop" : "Read aloud"}`}
                     >
                       <i
-                        className={`bi ${isPlayingGreetingText ? "bi-volume-mute text-danger" : "bi-volume-up text-info"}`}
+                        className={`bi ${isPlayingGreetingText && playingActiveBtn === "greet-btn" ? "bi-volume-mute text-danger" : "bi-volume-up text-info"}`}
                       />
                     </button>
                   </div>
@@ -594,6 +606,7 @@ const AiTutorPage = () => {
                       onClick={() =>
                         isRecording ? stopRecording() : startRecording("topic")
                       }
+                      style={{ height: "inherit" }}
                     >
                       <i
                         className={`bi bi-${isRecording ? "stop-circle" : "mic-fill"}`}
@@ -631,6 +644,7 @@ const AiTutorPage = () => {
                           </span>
                           <button
                             onClick={() => {
+                              setPlayingActiveBtn(`question-btn-${index}`);
                               isPlayingGreetingText
                                 ? muteGreetingText()
                                 : speakGreetingText(item.text);
@@ -646,7 +660,7 @@ const AiTutorPage = () => {
                             title={`${isPlayingGreetingText ? "Stop" : "Read aloud"}`}
                           >
                             <i
-                              className={`bi ${isPlayingGreetingText ? "bi-volume-mute text-danger" : "bi-volume-up text-info"}`}
+                              className={`bi ${isPlayingGreetingText && playingActiveBtn === "question-btn-" + index ? "bi-volume-mute text-danger" : "bi-volume-up text-info"}`}
                             />
                           </button>
                         </div>
@@ -675,6 +689,9 @@ const AiTutorPage = () => {
                               </span>
                               <button
                                 onClick={() => {
+                                  setPlayingActiveBtn(
+                                    `correct-answer-btn-${index}`,
+                                  );
                                   isPlayingGreetingText
                                     ? muteGreetingText()
                                     : speakGreetingText(item.corrected);
@@ -690,7 +707,7 @@ const AiTutorPage = () => {
                                 title={`${isPlayingGreetingText ? "Stop" : "Read aloud"}`}
                               >
                                 <i
-                                  className={`bi ${isPlayingGreetingText ? "bi-volume-mute text-danger" : "bi-volume-up text-info"}`}
+                                  className={`bi ${isPlayingGreetingText && playingActiveBtn === "correct-answer-btn-" + index ? "bi-volume-mute text-danger" : "bi-volume-up text-info"}`}
                                 />
                               </button>
                             </div>
@@ -708,11 +725,11 @@ const AiTutorPage = () => {
                         <div
                           className="d-flex justify-content-center align-items-center mb-3 flex-wrap gap-2"
                           style={{
-                            "border-radius": "var(--radius-full)",
+                            borderRadius: "var(--radius-full)",
                             padding: "4px",
                           }}
                         >
-                          {item.suggestion && (
+                          {item?.suggestion && (
                             <div>
                               <button
                                 className={`btn btn-sm btn-outline-warning ${showSuggestion ? "selected-feedback" : ""}`}
@@ -725,7 +742,7 @@ const AiTutorPage = () => {
                               </button>
                             </div>
                           )}
-                          {item.evaluation && (
+                          {item?.evaluation && (
                             <div>
                               <button
                                 className={`btn btn-sm btn-outline-info me-2 ${showEvaluation ? "selected-explanation" : ""}`}
@@ -740,7 +757,7 @@ const AiTutorPage = () => {
                           )}
                         </div>
                         {/* Feedback Toggle */}
-                        {item.suggestion && showSuggestion && (
+                        {item?.suggestion && showSuggestion && (
                           <div className="mt-3 mb-3">
                             <div className="suggestion-card mt-2 p-3">
                               <h6>Feedback</h6>
@@ -775,7 +792,7 @@ const AiTutorPage = () => {
                           </div>
                         )}
                         {/* explanation Toggle */}
-                        {item.evaluation && showEvaluation && (
+                        {item?.evaluation && showEvaluation && (
                           <div className="mt-3 mb-3">
                             <div className="evaluation-card mt-2 p-3">
                               <h6>Explanation</h6>
@@ -823,6 +840,7 @@ const AiTutorPage = () => {
                             </span>
                             <button
                               onClick={() => {
+                                setPlayingActiveBtn(`next-answer-btn-${index}`);
                                 isPlayingGreetingText
                                   ? muteGreetingText()
                                   : speakGreetingText(item.nextQuestion);
@@ -838,7 +856,7 @@ const AiTutorPage = () => {
                               title={`${isPlayingGreetingText ? "Stop" : "Read aloud"}`}
                             >
                               <i
-                                className={`bi ${isPlayingGreetingText ? "bi-volume-mute text-danger" : "bi-volume-up text-info"}`}
+                                className={`bi ${isPlayingGreetingText && playingActiveBtn === "next-answer-btn-" + index ? "bi-volume-mute text-danger" : "bi-volume-up text-info"}`}
                               />
                             </button>
                           </div>
@@ -897,6 +915,7 @@ const AiTutorPage = () => {
                 <div style={{ display: "flex", flexDirection: "column" }}>
                   <button
                     onClick={() => {
+                      setPlayingActiveBtn(`user-answer-btn`);
                       isPlayingGreetingText
                         ? muteGreetingText()
                         : speakGreetingText(userAnswer);
@@ -912,7 +931,7 @@ const AiTutorPage = () => {
                     title={`${isPlayingGreetingText ? "Stop" : "Read aloud"}`}
                   >
                     <i
-                      className={`bi ${isPlayingGreetingText ? "bi-volume-mute text-danger" : "bi-volume-up text-info"}`}
+                      className={`bi ${isPlayingGreetingText && playingActiveBtn === "user-answer-btn" ? "bi-volume-mute text-danger" : "bi-volume-up text-info"}`}
                     />
                   </button>
                   <button
@@ -985,16 +1004,23 @@ const AiTutorPage = () => {
                   <strong>Type:</strong> {selectedError.type}
                 </p>
                 <p>
-                  <strong>Original:</strong> "{selectedError.original_phrase}"
+                  <strong>Original:</strong>{" "}
+                  <span className=" text-danger">
+                    "{selectedError.original_phrase}"
+                  </span>
                 </p>
                 <p>
-                  <strong>Corrected:</strong> "{selectedError.corrected_phrase}"
+                  <strong>Corrected:</strong>{" "}
+                  <span className=" text-green">
+                    "{selectedError.corrected_phrase}"
+                  </span>
                 </p>
                 <p>
-                  <strong>Explanation:</strong> {selectedError.explanation}
+                  <strong>Explanation:</strong>{" "}
+                  <span>{selectedError.explanation}</span>
                 </p>
                 <button
-                  className="btn btn-sm btn-secondary"
+                  className="btn btn-sm btn-danger float-end"
                   onClick={() => setSelectedError(null)}
                 >
                   Close

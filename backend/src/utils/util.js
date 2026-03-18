@@ -305,23 +305,30 @@ exportData.updateDifficulty = async (userId, level) => {
 }
 
 exportData.validateErrorPosition = async (jsonResponse) => {
-    if (Array.isArray(jsonResponse.errors) && jsonResponse.errors.length) {
-        const errors = jsonResponse.errors;
-        const correctAns = jsonResponse.corrected;
-        const correctAnsArray = correctAns.split(" ")
-        errors.map((error) => {
-            if (correctAnsArray[error.position] != error.corrected_phrase) {
-                for (let i = error.position; i < correctAnsArray.length; i++) {
-                    if (correctAnsArray[i] === error.corrected_phrase) {
-                        error.position = i;
-                        break;
+    try {
+        if (Array.isArray(jsonResponse.errors) && jsonResponse.errors.length) {
+            const errors = jsonResponse.errors;
+            const correctAns = jsonResponse.corrected;
+            const correctAnsArray = correctAns.split(" ")
+            errors.map((error) => {
+                if (correctAnsArray[error.position] != error?.corrected_phrase.split(" ")[0]) {
+                    for (let i = error.position; i < correctAnsArray.length; i++) {
+                        if (correctAnsArray[i].toLowerCase() === error?.corrected_phrase.split(" ")[0].toLowerCase()) {
+                            error.position = i;
+                            break;
+                        }
                     }
                 }
-            }
-            return error
-        })
+                return error
+            })
+        }
+        return jsonResponse;
+    } catch {
+        console.error("response Validation fail.")
+        return jsonResponse;
     }
-    return jsonResponse;
+
+
 }
 
 exportData.checkUnknownError = async (responseData) => {
