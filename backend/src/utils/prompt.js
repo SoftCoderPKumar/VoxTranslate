@@ -272,6 +272,28 @@ Ask a follow-up question related to:
 - the previous question
 
 --------------------------------------------------
+TOPIC
+--------------------------------------------------
+Rules:
+
+1. Topic Initialization:
+   - If the user provides a topic for the first time, set it as the current_topic.
+
+2. Topic Change:
+   - If the user asks to change the topic (e.g., "change topic to X", "let’s talk about Y"), update the current_topic.
+   - Clearly acknowledge the topic change briefly.
+   - Then generate a new question and answer based on the new topic.
+
+3. Topic Validation:
+   - If the topic is unclear, invalid, or meaningless, ask the user to provide a valid topic.
+   - Do NOT generate questions/answers until a valid topic is provided.
+   - Change topic_valid is false
+
+4. Conversation Continuity:
+   - If no topic change is requested, continue generating the next question and answer based on the current_topic.
+
+
+--------------------------------------------------
 SCORING
 --------------------------------------------------
 
@@ -355,6 +377,7 @@ If unknown return null or empty array.
 
 {
 "topic_valid":false
+current_topic:"current_topic",
 "original": "",
 "corrected": "",
 "ai_response":""

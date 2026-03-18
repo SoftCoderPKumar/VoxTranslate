@@ -37,10 +37,28 @@
   line-height: 1.4;
 }
 
-.question-bubble {
+.question-bubble,
+.incorrect-answer-bubble {
   background: rgba(255, 107, 26, 0.1);
   border: 1px solid rgba(255, 107, 26, 0.2);
   color: var(--dark-text);
+}
+.incorrect-answer-bubble {
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-weight: 500;
+}
+
+.selected-feedback {
+  border-color: var(--bs-btn-hover-border-color);
+  background: linear-gradient(135deg, var(--green-primary), var(--green-light));
+  color: white;
+}
+
+.selected-explanation {
+  border-color: var(--bs-btn-hover-border-color);
+  background: linear-gradient(135deg, var(--green-primary), var(--green-light));
+  color: white;
 }
 
 .user-answer-bubble {
@@ -93,25 +111,6 @@
   margin-bottom: 12px;
 }
 
-.answer-input .input-group {
-  position: relative;
-}
-
-.answer-input .input-group-append {
-  position: absolute;
-  right: 8px;
-  top: 8px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.answer-input textarea {
-  padding-right: 120px;
-  resize: vertical;
-  min-height: 80px;
-}
-
 .error-modal-overlay {
   position: fixed;
   top: 0;
@@ -123,6 +122,17 @@
   align-items: center;
   justify-content: center;
   z-index: 1000;
+}
+/* .chat-input-wrapper textarea {
+  field-sizing: content;
+} */
+.chat-input-wrapper .form-control-dark:focus {
+  box-shadow: none;
+}
+.topic-class .mic-btn:hover {
+  transform: none;
+  box-shadow: none;
+  font-size: 30px;
 }
 
 .error-modal {
@@ -180,4 +190,10 @@
 
 .text-orange {
   color: var(--orange-primary) !important;
+}
+
+.ai-tutor-input-wrapper {
+  display: flex;
+  gap: 12px;
+  align-items: center;
 }

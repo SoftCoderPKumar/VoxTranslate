@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback, use } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import "./AiTutorPage.css";
 import api from "../utils/api";
 import toast from "react-hot-toast";
@@ -25,10 +25,13 @@ const AiTutorPage = () => {
   const [isInvalidTopic, setIsInvalidTopic] = useState(false);
   const [topicError, setTopicError] = useState(null);
 
-  const [currentQuestion, setCurrentQuestion] = useState("");
   const [userAnswer, setUserAnswer] = useState("");
   const [isRecording, setIsRecording] = useState(false);
   const [isThinking, setIsThinking] = useState(false);
+  const [browserTranscript, setBrowserTranscript] = useState("");
+
+  const [currentQuestion, setCurrentQuestion] = useState("");
+
   const [conversation, setConversation] = useState([]);
   const [showEvaluation, setShowEvaluation] = useState(false);
   const [showSuggestion, setShowSuggestion] = useState(false);
@@ -66,15 +69,18 @@ const AiTutorPage = () => {
       const synth = window.speechSynthesis;
       const voices = synth.getVoices();
       const utterance = new SpeechSynthesisUtterance(planText);
-      utterance.lang = "en-IN";
+      // utterance.lang = "en-IN";
       for (const voice of voices) {
         if (voice.name === "Google हिन्दी") {
           utterance.voice = voice;
         }
       }
-      utterance.onstart = () => setIsPlayingGreetingText(true);
+      utterance.onstart = () => {
+        setIsPlayingGreetingText(true);
+        stopRecording();
+      };
       utterance.onend = () => setIsPlayingGreetingText(false);
-      utterance.rate = 0.9;
+      utterance.rate = 1;
       utterance.pitch = 1;
       utterance.volume = 1;
       synth.speak(utterance);
@@ -102,13 +108,13 @@ const AiTutorPage = () => {
       const synth = window.speechSynthesis;
       const voices = synth.getVoices();
       const utterance = new SpeechSynthesisUtterance(planText);
-      utterance.lang = "en-IN";
+      // utterance.lang = "en-IN";
       for (const voice of voices) {
         if (voice.name === "Google हिन्दी") {
           utterance.voice = voice;
         }
       }
-      utterance.rate = 0.9;
+      utterance.rate = 1;
       utterance.pitch = 1;
       utterance.volume = 1;
       utterance.onstart = () => setIsSpeaking(true);
@@ -124,41 +130,93 @@ const AiTutorPage = () => {
     }
   };
 
-  // Speech recognition
-  const startRecording = () => {
-    if (
-      !("webkitSpeechRecognition" in window) &&
-      !("SpeechRecognition" in window)
-    ) {
-      toast.error("Speech recognition not supported in this browser");
-      return;
-    }
-
+  // Browser Speech Recognition for real-time transcription
+  const initSpeechRecognition = useCallback((recordingSection = "") => {
     const SpeechRecognition =
       window.SpeechRecognition || window.webkitSpeechRecognition;
-    recognitionRef.current = new SpeechRecognition();
-    recognitionRef.current.continuous = false;
-    recognitionRef.current.interimResults = false;
-    recognitionRef.current.lang = "en-US";
+    if (!SpeechRecognition) {
+      toast.error("Speech recognition not supported in this browser");
+      return null;
+    }
 
-    recognitionRef.current.onstart = () => setIsRecording(true);
-    recognitionRef.current.onresult = (event) => {
-      const transcript = event.results[0][0].transcript;
-      setUserAnswer((prev) => prev + transcript);
+    const recognition = new SpeechRecognition();
+
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = "en-US";
+
+    recognition.onresult = (event) => {
+      let interim = "";
+      let final = "";
+
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const transcript = event.results[i][0].transcript;
+        if (event.results[i].isFinal) final += transcript;
+        else interim += transcript;
+      }
+
+      setBrowserTranscript(final || interim);
+      if (recordingSection == "topic") {
+        if (final) setTopic((prev) => prev + final + " ");
+      } else {
+        if (final) setUserAnswer((prev) => prev + final + " ");
+      }
     };
-    recognitionRef.current.onend = () => setIsRecording(false);
-    recognitionRef.current.onerror = () => {
+
+    // recognition.current.onend = () => setIsRecording(false);
+    recognition.onerror = (event) => {
+      if (event.error !== "no-speech") {
+        console.error("Speech recognition error:", event.error);
+      } else {
+        toast.error("Speech recognition error");
+      }
       setIsRecording(false);
-      toast.error("Speech recognition error");
     };
+    return recognition;
+  }, []);
 
-    recognitionRef.current.start();
+  const startRecording = async (recordingSection = "") => {
+    try {
+      // Start browser speech recognition for real-time display
+      const recognition = initSpeechRecognition(recordingSection);
+      if (recognition) {
+        recognitionRef.current = recognition;
+        recognition.start();
+      }
+      if (recordingSection === "topic") {
+        muteGreetingText();
+      }
+      setIsRecording(true);
+      setBrowserTranscript("");
+      toast.success("Recording started — speak now!", { icon: "🎤" });
+    } catch (err) {
+      if (err.name === "NotAllowedError") {
+        toast.error(
+          "Microphone permission denied. Please allow microphone access.",
+        );
+      } else {
+        toast.error("Failed to access microphone: " + err.message);
+      }
+    }
+  };
+
+  const clearAll = () => {
+    muteGreetingText();
+    setBrowserTranscript("");
+    setIsPlayingGreetingText(false);
+    setUserAnswer("");
+  };
+  const copyToClipboard = (text) => {
+    navigator.clipboard
+      .writeText(text)
+      .then(() => toast.success("Copied to clipboard!"));
   };
 
   const stopRecording = () => {
     if (recognitionRef.current) {
       recognitionRef.current.stop();
     }
+    setIsRecording(false);
   };
 
   // Start conversation with topic
@@ -173,6 +231,8 @@ const AiTutorPage = () => {
     }
     muteGreetingText();
     setIsThinking(true);
+    setIsRecording(false);
+    setBrowserTranscript("");
     try {
       const response = await api.post("/api/talk/general", {
         topic: topic.trim(),
@@ -180,7 +240,7 @@ const AiTutorPage = () => {
       });
 
       const data = response.data.res;
-      if (!data.topic_valid) {
+      if (!data.topic_valid || !data.current_topic) {
         setIsInvalidTopic(true);
         setTopicError(data.ai_response);
         setTopic("");
@@ -218,9 +278,13 @@ const AiTutorPage = () => {
       return;
     }
 
+    muteGreetingText();
+    setIsRecording(false);
+
     setIsThinking(true);
     const answer = userAnswer.trim();
     setUserAnswer("");
+    setBrowserTranscript("");
 
     // Add user answer to conversation
     setConversation((prev) => [
@@ -242,6 +306,19 @@ const AiTutorPage = () => {
 
       const data = response.data.res;
 
+      if (!data.topic_valid || !data.current_topic) {
+        setIsInvalidTopic(true);
+        setTopicError(data.ai_response);
+        setTopic("");
+        speakGreetingText(data.ai_response);
+        speakMsgRef.current = data.ai_response;
+        return;
+      } else {
+        setIsInvalidTopic(false);
+        setTopicError(null);
+        setTopic(data.current_topic);
+        speakMsgRef.current = greetingMsgRef.current;
+      }
       // Add AI response to conversation
       setConversation((prev) => [
         ...prev,
@@ -264,6 +341,13 @@ const AiTutorPage = () => {
       toast.error(error.response?.data?.message || "Failed to get response");
     } finally {
       setIsThinking(false);
+    }
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      submitAnswer();
     }
   };
 
@@ -323,8 +407,8 @@ const AiTutorPage = () => {
             <span className="gradient-text">LexiAI Teacher</span>
           </h1>
 
-          {/* Provider Selection */}
-          {(!topic || conversation.length === 0) && (
+          {/* Provider Selection and */}
+          {(!topic || isInvalidTopic || conversation.length === 0) && (
             <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
               <div>
                 <p
@@ -354,7 +438,7 @@ const AiTutorPage = () => {
                   </>
                 )}
               </div>
-              {/* provider Toggle  */}
+              {/* show provider Toggle  */}
               {(user?.hasOpenApiKey || user?.hasGroqApiKey) && (
                 <div
                   style={{
@@ -416,7 +500,7 @@ const AiTutorPage = () => {
           )}
 
           {/* Topic Selection */}
-          {conversation.length === 0 && (
+          {(!topic || isInvalidTopic || conversation.length === 0) && (
             <div className="mb-4">
               <div
                 className="card mb-4"
@@ -456,14 +540,14 @@ const AiTutorPage = () => {
                       />
                     </button>
                   </div>
-
+                  {/* greeting or topic error message */}
                   {isInvalidTopic ? (
                     <>
                       <div
                         className="card-text p-2 text-danger"
                         style={{ border: "1px solid var(--dark-border)" }}
                       >
-                        <i class="bi bi-bug me-1"></i>
+                        <i className="bi bi-bug me-1"></i>
                         {topicError}
                       </div>
                     </>
@@ -475,7 +559,7 @@ const AiTutorPage = () => {
                         dangerouslySetInnerHTML={{
                           __html: DOMPurify.sanitize(
                             marked.parse(
-                              '<i class="bi bi-envelope-open-heart me-1 text-info-emphasis"></i>' +
+                              '<i className="bi bi-envelope-open-heart me-1 text-info-emphasis"></i>' +
                                 greetingMsg,
                               { breaks: true },
                             ),
@@ -486,15 +570,37 @@ const AiTutorPage = () => {
                   )}
                 </div>
               </div>
-              <div className="input-group">
+
+              {/* Topic input section */}
+              <div className="input-group topic-class">
                 <input
                   type="text"
                   className="form-control"
                   placeholder="e.g., Travel, Food, Hobbies, Weather..."
-                  value={topic}
+                  value={
+                    isRecording ? browserTranscript || "Listening..." : topic
+                  }
                   onChange={(e) => setTopic(e.target.value)}
                   onKeyUp={(e) => e.key === "Enter" && startConversation()}
                 />
+                {!isThinking && (
+                  <>
+                    <button
+                      className={`btn mic-btn ${isRecording ? "recording" : ""}`}
+                      title={
+                        isRecording ? "Stop recording" : "Start voice input"
+                      }
+                      disabled={!provider || isThinking}
+                      onClick={() =>
+                        isRecording ? stopRecording() : startRecording("topic")
+                      }
+                    >
+                      <i
+                        className={`bi bi-${isRecording ? "stop-circle" : "mic-fill"}`}
+                      />
+                    </button>
+                  </>
+                )}
                 <button
                   className="btn btn-orange"
                   onClick={startConversation}
@@ -511,22 +617,37 @@ const AiTutorPage = () => {
           )}
 
           {/* Conversation */}
-          {conversation.length > 0 && (
+          {topic && !isInvalidTopic && conversation.length > 0 && (
             <div className="conversation-container mb-4">
               <div className="conversation" ref={conversationRef}>
                 {conversation.map((item, index) => (
                   <div key={index} className={`message ${item.type}`}>
                     {item.type === "question" && (
                       <div className="question-bubble">
-                        <div className="d-flex align-items-center gap-2 mb-2">
-                          <i className="bi bi-question-circle text-orange"></i>
-                          <span className="fw-bold">Question:</span>
+                        <div className="d-flex justify-content-between gap-2 mb-2">
+                          <span className="fw-bold">
+                            <i className="bi bi-question-circle text-orange"></i>{" "}
+                            Question:
+                          </span>
                           <button
-                            className="btn btn-sm btn-outline-primary"
-                            onClick={() => speakText(item.text)}
-                            disabled={isSpeaking}
+                            onClick={() => {
+                              isPlayingGreetingText
+                                ? muteGreetingText()
+                                : speakGreetingText(item.text);
+                            }}
+                            style={{
+                              background: "none",
+                              border: "none",
+                              color: "var(--dark-muted)",
+                              cursor: "pointer",
+                              fontSize: "1rem",
+                              padding: "2px 6px",
+                            }}
+                            title={`${isPlayingGreetingText ? "Stop" : "Read aloud"}`}
                           >
-                            <i className="bi bi-volume-up"></i>
+                            <i
+                              className={`bi ${isPlayingGreetingText ? "bi-volume-mute text-danger" : "bi-volume-up text-info"}`}
+                            />
                           </button>
                         </div>
                         <p className="mb-0">{item.text}</p>
@@ -546,118 +667,183 @@ const AiTutorPage = () => {
                     {item.type === "ai_response" && (
                       <div className="ai-response-bubble">
                         {item.corrected && (
-                          <div className="mt-3">
-                            <div className="d-flex align-items-center gap-2 mb-2">
-                              <i className="bi bi-check-circle text-green"></i>
+                          <div className="mt-1">
+                            <div className="d-flex justify-content-between gap-2 mb-2">
                               <span className="fw-bold">
+                                <i className="bi bi-check-circle text-green"></i>{" "}
                                 Corrected Version:
                               </span>
                               <button
-                                className="btn btn-sm btn-outline-success"
-                                onClick={() => speakText(item.corrected)}
-                                disabled={isSpeaking}
+                                onClick={() => {
+                                  isPlayingGreetingText
+                                    ? muteGreetingText()
+                                    : speakGreetingText(item.corrected);
+                                }}
+                                style={{
+                                  background: "none",
+                                  border: "none",
+                                  color: "var(--dark-muted)",
+                                  cursor: "pointer",
+                                  fontSize: "1rem",
+                                  padding: "2px 6px",
+                                }}
+                                title={`${isPlayingGreetingText ? "Stop" : "Read aloud"}`}
                               >
-                                <i className="bi bi-volume-up"></i>
+                                <i
+                                  className={`bi ${isPlayingGreetingText ? "bi-volume-mute text-danger" : "bi-volume-up text-info"}`}
+                                />
                               </button>
                             </div>
-                            <p className="mb-0 corrected-text">
+                            <p
+                              className={`mb-2 ${item.errors.length > 0 ? "incorrect-answer-bubble" : "corrected-text"} `}
+                            >
                               {item.original}
                             </p>
-                            <p className="mb-0 corrected-text">
+                            <hr style={{ margin: "0px" }} />
+                            <p className="mt-2 corrected-text">
                               {renderCorrectedText(item.corrected, item.errors)}
                             </p>
                           </div>
                         )}
-
+                        <div
+                          className="d-flex justify-content-center align-items-center mb-3 flex-wrap gap-2"
+                          style={{
+                            "border-radius": "var(--radius-full)",
+                            padding: "4px",
+                          }}
+                        >
+                          {item.suggestion && (
+                            <div>
+                              <button
+                                className={`btn btn-sm btn-outline-warning ${showSuggestion ? "selected-feedback" : ""}`}
+                                onClick={() => {
+                                  setShowEvaluation(false);
+                                  setShowSuggestion(!showSuggestion);
+                                }}
+                              >
+                                {showSuggestion ? "Hide" : "Show"} Feedback
+                              </button>
+                            </div>
+                          )}
+                          {item.evaluation && (
+                            <div>
+                              <button
+                                className={`btn btn-sm btn-outline-info me-2 ${showEvaluation ? "selected-explanation" : ""}`}
+                                onClick={() => {
+                                  setShowSuggestion(false);
+                                  setShowEvaluation(!showEvaluation);
+                                }}
+                              >
+                                {showEvaluation ? "Hide" : "Show"} Explanation
+                              </button>
+                            </div>
+                          )}
+                        </div>
                         {/* Feedback Toggle */}
-                        {item.suggestion && (
-                          <div className="mt-3">
-                            <button
-                              className="btn btn-sm btn-outline-warning"
-                              onClick={() => setShowSuggestion(!showSuggestion)}
-                            >
-                              {showSuggestion ? "Hide" : "Show"} Feedback
-                            </button>
-                            {showSuggestion && (
-                              <div className="suggestion-card mt-2 p-3">
-                                <h6>Feedback</h6>
-                                <p>
-                                  <strong>Overall Quality:</strong>{" "}
-                                  {item.suggestion.overall_quality}/10
-                                </p>
-                                <div>
-                                  <strong>Strengths:</strong>
-                                  <ul>
-                                    {item.suggestion.strengths.map(
-                                      (strength, i) => (
-                                        <li key={i}>{strength}</li>
-                                      ),
-                                    )}
-                                  </ul>
-                                </div>
-                                <div>
-                                  <strong>Improvements:</strong>
-                                  <ul>
-                                    {item.suggestion.improvements.map(
-                                      (improvement, i) => (
-                                        <li key={i}>{improvement}</li>
-                                      ),
-                                    )}
-                                  </ul>
-                                </div>
-                                <p>
-                                  <em>{item.suggestion.encouragement}</em>
-                                </p>
+                        {item.suggestion && showSuggestion && (
+                          <div className="mt-3 mb-3">
+                            <div className="suggestion-card mt-2 p-3">
+                              <h6>Feedback</h6>
+                              <p>
+                                <strong>Overall Quality:</strong>{" "}
+                                {item.suggestion.overall_quality}/10
+                              </p>
+                              <div>
+                                <strong>Strengths:</strong>
+                                <ul>
+                                  {item.suggestion.strengths.map(
+                                    (strength, i) => (
+                                      <li key={i}>{strength}</li>
+                                    ),
+                                  )}
+                                </ul>
                               </div>
-                            )}
+                              <div>
+                                <strong>Improvements:</strong>
+                                <ul>
+                                  {item.suggestion.improvements.map(
+                                    (improvement, i) => (
+                                      <li key={i}>{improvement}</li>
+                                    ),
+                                  )}
+                                </ul>
+                              </div>
+                              <p>
+                                <em>{item.suggestion.encouragement}</em>
+                              </p>
+                            </div>
                           </div>
                         )}
                         {/* explanation Toggle */}
-                        {item.evaluation && (
-                          <div className="mt-3">
-                            <button
-                              className="btn btn-sm btn-outline-info me-2"
-                              onClick={() => setShowEvaluation(!showEvaluation)}
-                            >
-                              {showEvaluation ? "Hide" : "Show"} Explanation
-                            </button>
-                            {showEvaluation && (
-                              <div className="evaluation-card mt-2 p-3">
-                                <h6>Explanation</h6>
-                                <div className="row">
-                                  <div className="col-md-4">
-                                    <strong>Grammar:</strong>{" "}
-                                    {item.evaluation.grammar_score}/10
-                                  </div>
-                                  <div className="col-md-4">
-                                    <strong>Fluency:</strong>{" "}
-                                    {item.evaluation.fluency_score}/10
-                                  </div>
-                                  <div className="col-md-4">
-                                    <strong>Vocabulary:</strong>{" "}
-                                    {item.evaluation.vocabulary_score}/10
-                                  </div>
+                        {item.evaluation && showEvaluation && (
+                          <div className="mt-3 mb-3">
+                            <div className="evaluation-card mt-2 p-3">
+                              <h6>Explanation</h6>
+                              <div className="row">
+                                <div className="col-md-4">
+                                  <strong>Grammar:</strong>{" "}
+                                  {item.evaluation.grammar_score}/10
                                 </div>
-                                <div className="mt-2">
+                                <div className="col-md-4">
+                                  <strong>Fluency:</strong>{" "}
+                                  {item.evaluation.fluency_score}/10
+                                </div>
+                                <div className="col-md-4">
+                                  <strong>Vocabulary:</strong>{" "}
+                                  {item.evaluation.vocabulary_score}/10
+                                </div>
+                              </div>
+                              <div className="mt-2 row">
+                                <div className="col-md-4">
                                   <strong>Level:</strong>{" "}
-                                  {item.evaluation.fluency_level} |
-                                  <strong> Tone:</strong> {item.evaluation.tone}{" "}
-                                  |<strong> Mindset:</strong>{" "}
+                                  {item.evaluation.fluency_level}
+                                </div>
+                                <div className="col-md-4">
+                                  <strong> Tone:</strong> {item.evaluation.tone}
+                                </div>
+                                <div className="col-md-4">
+                                  <strong> Mindset:</strong>{" "}
                                   {item.evaluation.user_mindset}
                                 </div>
                               </div>
-                            )}
+                            </div>
                           </div>
                         )}
-
-                        <div
-                          className="d-flex align-items-center gap-2 mb-2"
-                          style={{ border: "1px solid var(--dark-border)" }}
-                        >
-                          <i className="bi bi-robot text-blue"></i>
-                          <span className="fw-bold">LexiAI Teacher:</span>
+                        <div className="question-bubble">
+                          <div
+                            className="d-flex justify-content-between align-items-center gap-2 mb-2"
+                            style={{
+                              borderBottom: "1px solid rgba(255, 107, 26, 0.2)",
+                              padding: "6px",
+                            }}
+                          >
+                            <span className="fw-bold">
+                              <i className="bi bi-robot text-blue me-1"></i>
+                              LexiAI Teacher:
+                            </span>
+                            <button
+                              onClick={() => {
+                                isPlayingGreetingText
+                                  ? muteGreetingText()
+                                  : speakGreetingText(item.nextQuestion);
+                              }}
+                              style={{
+                                background: "none",
+                                border: "none",
+                                color: "var(--dark-muted)",
+                                cursor: "pointer",
+                                fontSize: "1rem",
+                                padding: "2px 6px",
+                              }}
+                              title={`${isPlayingGreetingText ? "Stop" : "Read aloud"}`}
+                            >
+                              <i
+                                className={`bi ${isPlayingGreetingText ? "bi-volume-mute text-danger" : "bi-volume-up text-info"}`}
+                              />
+                            </button>
+                          </div>
+                          <p className="mb-0">{item.text}</p>
                         </div>
-                        <p className="mb-0 text-blue">{item.text}</p>
                       </div>
                     )}
                   </div>
@@ -673,40 +859,115 @@ const AiTutorPage = () => {
           )}
 
           {/* Answer Input */}
-          {conversation.length > 0 && (
-            <div className="answer-input">
-              <label className="form-label">Your Answer</label>
-              <div className="input-group">
+          {topic && !isInvalidTopic && conversation.length > 0 && (
+            <div className="card-dark p-3 chat-input-wrapper align-items-center gap-2">
+              {/* <div className="badge-green" style={{ minWidth: "fit-content" }}>
+                <i className="bi bi-chat-right-text me-1"></i>
+                Your Answer
+              </div> */}
+              <div
+                className="input-group"
+                style={{
+                  flexWrap: "unset",
+                  alignItems: "center",
+                  border: "inherit",
+                  borderRadius: "inherit",
+                  background: "inherit",
+                  marginLeft: "1px",
+                }}
+              >
                 <textarea
-                  className="form-control"
+                  className="form-control-dark"
+                  style={{
+                    borderRadius: "inherit",
+                    border: "none",
+                    borderRight: "inherit",
+                  }}
                   rows="3"
-                  placeholder="Type your answer here..."
-                  value={userAnswer}
-                  onChange={(e) => setUserAnswer(e.target.value)}
-                  onKeyPress={(e) =>
-                    e.key === "Enter" && !e.shiftKey && submitAnswer()
+                  placeholder={`Transcribed Answer will appear here...\nOr type your Answer..`}
+                  value={
+                    isRecording
+                      ? browserTranscript || "Listening..."
+                      : userAnswer
                   }
+                  readOnly={isRecording}
+                  onChange={(e) => setUserAnswer(e.target.value)}
+                  onKeyDown={handleKeyDown}
                 />
-                <div className="input-group-append d-flex flex-column">
+                <div style={{ display: "flex", flexDirection: "column" }}>
                   <button
-                    className={`btn ${isRecording ? "btn-danger" : "btn-outline-secondary"}`}
-                    onClick={isRecording ? stopRecording : startRecording}
-                    title={isRecording ? "Stop recording" : "Start voice input"}
+                    onClick={() => {
+                      isPlayingGreetingText
+                        ? muteGreetingText()
+                        : speakGreetingText(userAnswer);
+                    }}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      color: "var(--dark-muted)",
+                      cursor: "pointer",
+                      fontSize: "1rem",
+                      padding: "2px 6px",
+                    }}
+                    title={`${isPlayingGreetingText ? "Stop" : "Read aloud"}`}
                   >
-                    <i className={`bi bi-mic${isRecording ? "-fill" : ""}`}></i>
+                    <i
+                      className={`bi ${isPlayingGreetingText ? "bi-volume-mute text-danger" : "bi-volume-up text-info"}`}
+                    />
                   </button>
                   <button
-                    className="btn btn-orange mt-1"
-                    onClick={submitAnswer}
-                    disabled={!userAnswer.trim() || isThinking}
+                    onClick={() => copyToClipboard(userAnswer)}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      color: "var(--dark-muted)",
+                      cursor: "pointer",
+                      fontSize: "0.9rem",
+                      padding: "2px 6px",
+                    }}
+                    title="Copy"
                   >
-                    {isThinking ? (
-                      <div className="spinner-border spinner-border-sm" />
-                    ) : (
-                      "Submit"
-                    )}
+                    <i className="bi bi-clipboard text-success" />
+                  </button>
+                  <button
+                    onClick={clearAll}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      color: "var(--dark-muted)",
+                      cursor: "pointer",
+                      fontSize: "0.9rem",
+                      padding: "2px 6px",
+                    }}
+                    title="Clear"
+                  >
+                    <i className="bi bi-x-circle text-danger" />
                   </button>
                 </div>
+              </div>
+              <div className="d-flex align-items-center gap-2">
+                <button
+                  className={`mic-btn ${isRecording ? "recording" : ""}`}
+                  onClick={isRecording ? stopRecording : startRecording}
+                  title={isRecording ? "Stop recording" : "Start voice input"}
+                >
+                  <i
+                    className={`bi bi-${isRecording ? "stop-circle" : "mic-fill"}`}
+                  />
+                </button>
+                <button
+                  className="btn btn-orange"
+                  style={{ padding: "10px 18px" }}
+                  title={!isThinking && "Submit"}
+                  onClick={submitAnswer}
+                  disabled={!userAnswer.trim() || isThinking}
+                >
+                  {isThinking ? (
+                    <div className="spinner-border spinner-border-sm" />
+                  ) : (
+                    "Submit"
+                  )}
+                </button>
               </div>
             </div>
           )}
