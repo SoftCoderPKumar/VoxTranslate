@@ -22,6 +22,7 @@ import SpeechTranslatorPage from "./pages/SpeechTranslatorPage";
 import ChatbotPage from "./pages/ChatbotPage";
 import UserListPage from "./pages/UserListPage";
 import AiTutorPage from "./pages/AiTutorPage";
+import AntakshariPage from "./pages/AntakshariPage";
 
 // Components
 import Navbar from "./components/Navbar";
@@ -157,6 +158,16 @@ const AppRoutes = () => {
           element={
             <ProtectedRoute>
               <AiTutorPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Antakshari Game */}
+        <Route
+          path="/antakshari"
+          element={
+            <ProtectedRoute>
+              <AntakshariPage />
             </ProtectedRoute>
           }
         />

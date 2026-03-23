@@ -75,7 +75,7 @@ const saveApiKey = async (req, res, next) => {
                     apiKey: apiKey.trim(),
                 });
                 let tt = await testClient.models.list();
-                console.log(tt)
+
             } catch (err) {
                 if (err.status === 401) {
                     return res.status(400).json({ error: 'Invalid Groq API key - authentication failed' });
@@ -286,7 +286,7 @@ const getUsers = async (req, res, next) => {
                 ]
             }
         ];
-        console.log("User query:", query, "Page:", page, "Limit:", limit);
+
 
         const users = await User.find(query)
             .sort({ createdAt: -1 })

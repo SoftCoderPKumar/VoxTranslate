@@ -344,7 +344,6 @@ const AiTutorPage = () => {
 
       setCurrentQuestion(data.next_question);
       speakText(data.ai_response);
-      console.log("----3-----", questionCount.current);
       questionCount.current = questionCount.current + 1;
     } catch (error) {
       setUserAnswer(answer);

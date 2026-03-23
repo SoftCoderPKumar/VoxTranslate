@@ -10,6 +10,7 @@ const Navbar = () => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [adminOpen, setAdminOpen] = useState(false);
   const [aiAssistantOpen, setAiAssistantOpen] = useState(false);
+  const [gameOpen, setGameOpen] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
@@ -21,6 +22,7 @@ const Navbar = () => {
     setMenuOpen(false);
     setAdminOpen(false);
     setAiAssistantOpen(false);
+    setGameOpen(false);
   }, [location]);
 
   const isActive = (path) => {
@@ -102,6 +104,7 @@ const Navbar = () => {
             )}
             {user && (
               <>
+                {/* AI Menu */}
                 <li
                   className="nav-item dropdown"
                   style={{ position: "relative" }}
@@ -218,6 +221,65 @@ const Navbar = () => {
                   )}
                 </li>
 
+                {/* Game Menu */}
+                <li
+                  className="nav-item dropdown"
+                  style={{ position: "relative" }}
+                >
+                  <button
+                    className="nav-link px-3"
+                    onClick={() => setGameOpen((v) => !v)}
+                    style={{
+                      background: "transparent",
+                      border: "none",
+                      color: isActive(["/antakshari"])
+                        ? "var(--orange-primary)"
+                        : "var(--dark-muted)",
+                      fontWeight: isActive(["/antakshari"]) ? 600 : 400,
+                      cursor: "pointer",
+                    }}
+                    aria-expanded={gameOpen}
+                  >
+                    <i className="bi bi-controller me-1"></i>
+                    Game
+                    <i
+                      className={`bi bi-caret-${gameOpen ? "up" : "down"}-fill ms-2`}
+                    />
+                  </button>
+                  {gameOpen && (
+                    <ul
+                      className="card-dark"
+                      style={{
+                        zIndex: 100,
+                        position: "absolute",
+                        top: "48px",
+                        left: 0,
+                        minWidth: 180,
+                        borderRadius: 8,
+                        padding: 8,
+                        listStyle: "none",
+                      }}
+                    >
+                      <li style={{ padding: 6 }}>
+                        <Link
+                          className="text-decoration-none"
+                          to="/antakshari"
+                          style={{
+                            color: isActive("/antakshari")
+                              ? "var(--orange-primary)"
+                              : "var(--dark-muted)",
+                            fontWeight: isActive("/antakshari") ? 600 : 400,
+                          }}
+                        >
+                          <i className="bi bi-music-note-beamed me-1" />
+                          Antakshari
+                        </Link>
+                      </li>
+                    </ul>
+                  )}
+                </li>
+
+                {/* Admin Menu */}
                 {user.role === "admin" && (
                   <>
                     <li
