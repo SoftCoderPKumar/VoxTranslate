@@ -41,6 +41,7 @@ const AiTutorPage = () => {
 
   const recognitionRef = useRef(null);
   const conversationRef = useRef(null);
+  const questionCount = useRef(1);
 
   // Typewriter effect for assistant messages
   useEffect(() => {
@@ -308,7 +309,7 @@ const AiTutorPage = () => {
         question: currentQuestion,
         studentAnswer: answer,
         provider,
-        difficultyLevel: "Beginner",
+        difficultyLevel: await getDifficultyLevel(),
       });
 
       const data = response.data.res;
@@ -343,11 +344,46 @@ const AiTutorPage = () => {
 
       setCurrentQuestion(data.next_question);
       speakText(data.ai_response);
+      console.log("----3-----", questionCount.current);
+      questionCount.current = questionCount.current + 1;
     } catch (error) {
-      console.log(error);
-      toast.error(error.response?.data?.message || "Failed to get response");
+      setUserAnswer(answer);
+      // pop user answer to conversation
+      setConversation((prev) => {
+        prev.pop();
+        return prev;
+      });
+      console.error(error);
+      toast.error("Failed to get response, try again!");
     } finally {
       setIsThinking(false);
+    }
+  };
+
+  const getDifficultyLevel = async () => {
+    const num = questionCount.current;
+
+    switch (true) {
+      case num >= 1 && num <= 5:
+        return "Beginner";
+
+      case num > 5 && num <= 10:
+        return "Elementary";
+
+      case num > 10 && num <= 15:
+        return "Intermediate";
+
+      case num > 15 && num <= 20:
+        return "Upper-Intermediate";
+
+      case num > 20 && num <= 25:
+        return "Advanced";
+
+      case num > 25:
+        return "Expert";
+
+      default:
+        return "Beginner";
     }
   };
 
@@ -363,7 +399,6 @@ const AiTutorPage = () => {
     if (!errors || errors.length === 0) return text;
 
     errors.sort((a, b) => a.position - b.position);
-    console.log("errors", errors);
     const parts = [];
     let lastWordIndex = 0;
     const textArr = text.split(" ");
@@ -373,7 +408,6 @@ const AiTutorPage = () => {
         const errTextArr = error.corrected_phrase.split(" ");
 
         const beforeError = textArr.slice(lastWordIndex, error.position);
-        console.log("beforeError", beforeError);
 
         if (beforeError) parts.push(beforeError.join(" "));
         if (lastWordIndex <= error.position) {
@@ -383,7 +417,6 @@ const AiTutorPage = () => {
           );
 
           const errorText = errorTextArr.join(" ");
-          console.log("errorText", errorText);
           parts.push(
             <span
               key={index}
@@ -397,7 +430,6 @@ const AiTutorPage = () => {
         }
 
         lastWordIndex = error.position + errTextArr.length;
-        console.log("lastWordIndex", lastWordIndex);
       }
     });
 

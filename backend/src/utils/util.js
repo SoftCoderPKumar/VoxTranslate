@@ -272,9 +272,9 @@ exportData.questionAnswerWithGroqOrOpenai = async (question = "", studentAnswer 
                 { role: 'system', content: QUA_ANS_TALK_SYSTEM_PROMPT },
                 { role: 'user', content: userPrompt },
             ],
-            max_tokens: 800,
-            temperature: 0.3,
-            top_p: 0.9,
+            max_tokens: 2000,
+            temperature: 0.8,
+            top_p: 1,
             response_format: { type: "json_object" },
         });
         const content = response.choices[0].message.content.trim();
@@ -309,7 +309,7 @@ exportData.validateErrorPosition = async (jsonResponse) => {
         if (Array.isArray(jsonResponse.errors) && jsonResponse.errors.length) {
             const errors = jsonResponse.errors;
             const correctAns = jsonResponse.corrected;
-            const correctAnsArray = correctAns.split(" ")
+            const correctAnsArray = correctAns ? correctAns.split(" ") : []
             errors.map((error) => {
                 if (correctAnsArray[error.position] != error?.corrected_phrase.split(" ")[0]) {
                     for (let i = error.position; i < correctAnsArray.length; i++) {
@@ -334,8 +334,8 @@ exportData.validateErrorPosition = async (jsonResponse) => {
 exportData.checkUnknownError = async (responseData) => {
     const correctAns = responseData.corrected;
     const originalAns = responseData.original;
-    const correctAnsArray = correctAns.split(" ");
-    const originalAnsArray = originalAns.split(" ");
+    const correctAnsArray = correctAns ? correctAns.split(" ") : [];
+    const originalAnsArray = originalAns ? originalAns.split(" ") : [];
     const positionSet = new Set();
     if (Array.isArray(responseData.errors)) {
         const errors = responseData.errors;
