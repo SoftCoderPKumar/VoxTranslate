@@ -1,5 +1,7 @@
-import  { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect } from "react";
 import nspell from "nspell";
+import { getRules } from "../utils/util";
+import TextToSpeech from "../components/TextToSpeech";
 
 import "./AntakshariPage.css";
 
@@ -22,6 +24,7 @@ const AntakshariPage = () => {
 
   const timerRef = useRef(null);
   const inputRef = useRef(null);
+  const rulesRef = useRef([]);
 
   // Load dictionary
   useEffect(() => {
@@ -34,6 +37,14 @@ const AntakshariPage = () => {
     };
 
     loadDictionary();
+  }, []);
+
+  // load Roles
+  useEffect(() => {
+    const loadRoles = async () => {
+      rulesRef.current = await getRules();
+    };
+    loadRoles();
   }, []);
 
   // check spelling
@@ -496,40 +507,36 @@ const AntakshariPage = () => {
 
           {/* Game Rules */}
           <div className="game-rules mt-4 ">
-            <button
-              className=" d-flex justify-content-between align-content-center gap-1"
-              onClick={() => setRuleOpen((v) => !v)}
-              style={{
-                background: "transparent",
-                border: "none",
-                color: "var(--dark-muted)",
-                fontWeight: 600,
-                cursor: "pointer",
-                width: "100%",
-              }}
-              aria-expanded={ruleOpen}
-            >
-              <div className=" text-info">
-                <i className="bi bi-info-circle me-2"></i>Game Rules
+            <div className="d-flex justify-content-between align-content-center gap-1">
+              <div>
+                <span className="me-sm-2">
+                  <i className="bi bi-info-circle me-2 text-info"></i>Game Rules
+                </span>
+                <TextToSpeech items={rulesRef.current} />
               </div>
-              <i
-                className={`bi bi-caret-${ruleOpen ? "up" : "down"}-fill ms-2`}
-              />
-            </button>
+              <button
+                onClick={() => setRuleOpen((v) => !v)}
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  color: "var(--dark-muted)",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+                aria-expanded={ruleOpen}
+              >
+                <i
+                  className={`bi bi-caret-${ruleOpen ? "up" : "down"}-fill ms-2`}
+                />
+              </button>
+            </div>
+
             {/* Rule list */}
             {ruleOpen && (
               <ul className="rules-list border-top mt-2 pt-2">
-                <li>
-                  Enter words that start with the last letter of the previous
-                  word.
-                </li>
-                <li>Each word must be at least 2 letters long.</li>
-                <li>You have 60 seconds to enter each word.</li>
-                <li>
-                  Score points based on word length (1 points per letter).
-                </li>
-                <li>Avoid repeating words that have already been played.</li>
-                <li>The game ends when time runs out.</li>
+                {rulesRef.current.map((rule, i) => (
+                  <li key={i}>{rule}</li>
+                ))}
               </ul>
             )}
           </div>
